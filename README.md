@@ -31,3 +31,7 @@ It does not carry over textures, textures will need to be extracted from the sou
 ## Import example
 This file format was created specifically for the Eight Winds Engine.
 https://github.com/GDBobby/Eight-Winds-Engine/blob/main/src/SkeletonHandlerBase.cpp
+
+
+## Attributions
+https://learnopengl.com/Guest-Articles/2020/Skeletal-Animation - the reading code is largely based off this
