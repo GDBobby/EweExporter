@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bone.h"
+#include "Vertices.h"
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
@@ -8,7 +9,7 @@
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/LogStream.hpp>
 
-#include <boost/serialization/nvp.hpp>
+//#include <boost/serialization/nvp.hpp>
 
 #include <map>
 #include <vector>
@@ -18,231 +19,7 @@
 
 #define FORCE_TANGENTS true
 
-
 //#include <iomanip>
-#define MAX_BONE_INFLUENCE 4
-#define MAX_BONE_WEIGHTS 4
-struct bobvec3 {
-	float x;
-	float y;
-	float z;
-
-	bobvec3() { x = 0.f; y = 0.f; z = 0.f; }
-
-	template<class Archive>
-	void serialize(Archive& archive, const unsigned int version) {
-		archive& x;
-		archive& y;
-		archive& z;
-	}
-	bool operator == (const bobvec3& other) const {
-		return (x == other.x) && (y == other.y) && (z == other.z);
-	}
-	void operator =(const bobvec3& other) {
-		x = other.x;
-		y = other.y;
-		z = other.z;
-	}
-	void operator=(aiVector3D& other) {
-		x = other.x;
-		y = other.y;
-		z = other.z;
-	}
-};
-struct bobvec2 {
-	float x;
-	float y;
-
-	bobvec2() { x = 0.f; y = 0.f; }
-	template<class Archive>
-	void serialize(Archive& archive, const unsigned int version) {
-		archive& x;
-		archive& y;
-	}
-	bool operator == (const bobvec2& other) const {
-		return (x == other.x) && (y == other.y);
-	}
-	void operator = (const bobvec2& other) {
-		x = other.x;
-		y = other.y;
-	}
-};
-struct boneVertexNoTangent {
-	bobvec3 position;
-	bobvec3 normal;
-	bobvec2 uv;
-	int m_BoneIDs[MAX_BONE_INFLUENCE];
-	float m_Weights[MAX_BONE_INFLUENCE];
-	boneVertexNoTangent() {
-		position = bobvec3();
-		normal = bobvec3();
-		uv = bobvec2();
-		for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
-			m_BoneIDs[i] = -1;
-			m_Weights[i] = 0.f;
-		}
-	}
-
-	bool operator==(const boneVertexNoTangent& other) const {
-		if (!(position == other.position)) {
-			//printf("position fail bonevertex \n");
-			return false;
-		}
-		if (!(normal == other.normal)) {
-			//printf("normal fail bonevertex \n");
-			return false;
-		}
-		if (!(uv == other.uv)) {
-			//printf("uv fail, bonevertex \n");
-			return false;
-		}
-		for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
-			if (m_BoneIDs[i] != other.m_BoneIDs[i]) {
-				//printf("bone id fail, bone vertex : %d \n", i);
-				return false;
-			}
-			if (m_Weights[i] != other.m_Weights[i]) {
-
-				//printf("bone weight fail, bone vertex : %d \n", i);
-				return false;
-			}
-		}
-		return true;
-	}
-
-
-	template<class Archive>
-	void serialize(Archive& archive, const unsigned int version) {
-		archive& position;
-		archive& normal;
-		archive& uv;
-		archive& m_BoneIDs;
-		archive& m_Weights;
-	}
-};
-struct boneVertex {
-	bobvec3 position;
-	bobvec3 normal;
-	bobvec2 uv;
-	bobvec3 tangent;
-
-	int m_BoneIDs[MAX_BONE_INFLUENCE];
-	float m_Weights[MAX_BONE_INFLUENCE];
-
-	boneVertex() {
-		position = bobvec3();
-		normal = bobvec3();
-		uv = bobvec2();
-		tangent = bobvec3();
-		for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
-			m_BoneIDs[i] = -1;
-			m_Weights[i] = 0.f;
-		}
-	}
-	
-	bool operator==(const boneVertex& other) const {
-		if (!(this->position == other.position)) {
-			//printf("position fail bonevertex \n");
-			return false;
-		}
-		if (!(this->normal == other.normal)) {
-			//printf("normal fail bonevertex \n");
-			return false;
-		}
-		if (!(this->uv == other.uv)) {
-			//printf("uv fail, bonevertex \n");
-			return false;
-		}
-		if (!(this->tangent == other.tangent)) {
-			//printf("tangent fail, bonevertex \n");
-			return false;
-		}
-		for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
-			if (this->m_BoneIDs[i] != other.m_BoneIDs[i]) {
-				//printf("bone id fail, bone vertex : %d \n", i);
-				return false;
-			}
-			if (this->m_Weights[i] != other.m_Weights[i]) {
-
-				//printf("bone weight fail, bone vertex : %d \n", i);
-				return false;
-			}
-		}
-		return true;
-	}
-	
-
-	template<class Archive>
-	void serialize(Archive& archive, const unsigned int version) {
-		archive& position;
-		archive& normal;
-		archive& uv;
-		archive& tangent;
-		archive& m_BoneIDs;
-		archive& m_Weights;
-	}
-};
-
-struct Vertex {
-	bobvec3 position;
-	bobvec3 normal;
-	bobvec2 uv;
-	bobvec3 tangent;
-
-	bool operator==(const Vertex& other) const {
-		if (!(this->position == other.position)) {
-			//printf("position fail bonevertex \n");
-			return false;
-		}
-		if (!(this->normal == other.normal)) {
-			//printf("normal fail bonevertex \n");
-			return false;
-		}
-		if (!(this->uv == other.uv)) {
-			//printf("uv fail, bonevertex \n");
-			return false;
-		}
-		if (!(this->tangent == other.tangent)) {
-			//printf("tangent fail, bonevertex \n");
-			return false;
-		}
-		return true;
-	}
-	template<class Archive>
-	void serialize(Archive& archive, const unsigned int version) {
-		archive& position;
-		archive& normal;
-		archive& uv;
-		archive& tangent;
-	}
-};
-struct VertexNT {
-	bobvec3 position;
-	bobvec3 normal;
-	bobvec2 uv;
-
-	bool operator==(const VertexNT& other) const {
-		if (!(this->position == other.position)) {
-			//printf("position fail bonevertex \n");
-			return false;
-		}
-		if (!(this->normal == other.normal)) {
-			//printf("normal fail bonevertex \n");
-			return false;
-		}
-		if (!(this->uv == other.uv)) {
-			//printf("uv fail, bonevertex \n");
-			return false;
-		}
-		return true;
-	}
-	template<class Archive>
-	void serialize(Archive& archive, const unsigned int version) {
-		archive& position;
-		archive& normal;
-		archive& uv;
-	}
-};
 
 struct BoneInfo {
 	/*id is index in finalBoneMatrices*/
@@ -273,7 +50,8 @@ public:
 	inline float GetTicksPerSecond() { return m_TicksPerSecond; }
 	inline float GetDuration() { return m_Duration; }
 	inline const AssimpNodeData& GetRootNode() { return m_RootNode; }
-	inline const std::map<std::string, BoneInfo>& GetBoneIDMap() { return m_BoneInfoMap; }
+	inline const std::map<std::string, BoneInfo>& GetBoneIDMap() { 
+		return m_BoneInfoMap; }
 	inline uint32_t getBoneIDMapSize() { return m_BoneInfoMap.size(); }
 	inline const int& getBoneSize() { return m_Bones.size(); }
 
@@ -332,10 +110,11 @@ public:
 	auto& GetBoneInfoMap() { return m_BoneInfoMap; }
 	int& GetBoneCount() { return m_BoneCounter; }
 
-	std::vector<std::pair<std::vector<boneVertex>, std::vector<uint32_t>>> meshes;
-	std::vector<std::pair<std::vector<boneVertexNoTangent>, std::vector<uint32_t>>> meshesNT;
-	std::vector<std::pair<std::vector<Vertex>, std::vector<uint32_t>>> meshesSimple;
-	std::vector<std::pair<std::vector<VertexNT>, std::vector<uint32_t>>> meshesNTSimple;
+	std::vector<MeshData<boneVertex>> meshes{};
+	std::vector<MeshData<boneVertexNoTangent>> meshesNT{};
+	std::vector<MeshData<Vertex>> meshesSimple{};
+	std::vector<MeshData<VertexNT>> meshesNTSimple{};
+
 	//std::vector <std::pair<std::vector<boneVertex>, std::vector<uint32_t>>> meshes;
 
 	std::vector<glm::mat4>& GetFinalBoneMatrices() { 
@@ -385,15 +164,17 @@ private:
 	void collectTangent(boneVertex& vertex, aiMesh* mesh, uint32_t index) {
 		if (mesh->HasTangentsAndBitangents()) {
 			//memcpy(vertex.tangent, &mesh->mTangents[i], SIZEOF3);
-			vertex.tangent = mesh->mTangents[index];
-			//vertex.tangent.x = mesh->mTangents[i].x;
-			//vertex.tangent.y = mesh->mTangents[i].y;
-			//vertex.tangent.z = mesh->mTangents[i].z;
+			//vertex.tangent = mesh->mTangents[index];
+			vertex.tangent.x = mesh->mTangents[index].x;
+			vertex.tangent.y = mesh->mTangents[index].y;
+			vertex.tangent.z = mesh->mTangents[index].z;
 		}
 	}
 	void collectTangent(Vertex& vertex, aiMesh* mesh, uint32_t index) {
 		if (mesh->HasTangentsAndBitangents()) {
-			vertex.tangent = mesh->mTangents[index];
+			vertex.tangent.x = mesh->mTangents[index].x;
+			vertex.tangent.y = mesh->mTangents[index].y;
+			vertex.tangent.z = mesh->mTangents[index].z;
 		}
 	}
 

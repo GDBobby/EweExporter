@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 
+
 #define CUSTOM_ROLL_INDICES true
 
 template <typename T, typename... Rest>
@@ -13,8 +14,8 @@ void hashCombine(std::size_t& seed, const T& v, const Rest&... rest) {
 };
 
 template<>
-struct std::hash<bobvec2> {
-	size_t operator()(bobvec2 const& bv2) const {
+struct std::hash<glm::vec2> {
+	size_t operator()(glm::vec2 const& bv2) const {
 		size_t seed = 0;
 		hashCombine(seed, bv2.x, bv2.y);
 		return seed;
@@ -22,8 +23,8 @@ struct std::hash<bobvec2> {
 };
 
 template<>
-struct std::hash<bobvec3> {
-	size_t operator()(bobvec3 const& bv3) const {
+struct std::hash<glm::vec3> {
+	size_t operator()(glm::vec3 const& bv3) const {
 		size_t seed = 0;
 		hashCombine(seed, bv3.x, bv3.y, bv3.z);
 		return seed;
@@ -286,6 +287,12 @@ SkeletonHandler::SkeletonHandler(std::string filePath) {
 	else if (filePath.find("DevilMan") != filePath.npos) {
 		printf("found devilman \n");
 		usefulBone.resize(52, false);
+	}
+	else if (filePath.find("charmer") != filePath.npos) {
+		usefulBone.resize(35, false);
+	}
+	else if (filePath.find("carrot") != filePath.npos) {
+		usefulBone.resize(33, false);
 	}
 	else {
 		usefulBone.resize(66, false);
@@ -635,23 +642,20 @@ std::pair<std::vector<T>, std::vector<uint32_t>> SkeletonHandler::processMesh(ai
 			SetVertexBoneDataToDefault(vertex);
 		}
 
-		//memcpy(vertex.position., &mesh->mVertices[i], SIZEOF3);
-		/*
-		vertex.position[0] = mesh->mVertices[i].x;// / 100.f;
-		vertex.position.y = mesh->mVertices[i].y;// / 100.f;
-		vertex.position.z = mesh->mVertices[i].z;// / 100.f;
-		*/
-		vertex.position = mesh->mVertices[i];
+		memcpy(&vertex.position, &mesh->mVertices[i], sizeof(float) * 3);
+		//vertex.position = mesh->mVertices[i];
+		//vertex.position.x = mesh->mVertices[i].x;
+		//vertex.position.y = mesh->mVertices[i].y;
+		//vertex.position.z = mesh->mVertices[i].z;
 		//vertex.normal = AssimpGLMHelpers::GetGLMVec(mesh->mNormals[i]);
 
 		if (mesh->HasNormals()) {
-			//memcpy(vertex.normal, &mesh->mNormals[i], SIZEOF3);
-			vertex.normal = mesh->mNormals[i];
-			/*
-			vertex.normal.x = mesh->mNormals[i].x;
-			vertex.normal.y = mesh->mNormals[i].y;
-			vertex.normal.z = mesh->mNormals[i].z;
-			*/
+			memcpy(&vertex.normal, &mesh->mNormals[i], sizeof(float) * 3);
+			//vertex.normal = mesh->mNormals[i];
+			//vertex.normal.x = mesh->mNormals[i].x;
+			//vertex.normal.y = mesh->mNormals[i].y;
+			//vertex.normal.z = mesh->mNormals[i].z;
+			
 		}
 		else {
 			//std::cout << "why no normals" << std::endl;

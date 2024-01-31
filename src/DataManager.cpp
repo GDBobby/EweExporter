@@ -18,6 +18,123 @@ for (int i = 0; i < 5; i++) {
 }
 */
 
+DataManager::DataManager(std::string fileLocation, std::string exportLocation) :importPath{ fileLocation } {
+	//Assimp::Importer importer;
+	if (fileLocation.find("ellen") != fileLocation.npos) {
+		printf("found ellen \n");
+		printf("yo wtf \n");
+		boneCount = 101; /* THIS HAS TO BE SET MANUALLY BECAUSE BONE COUNT ISN'T PROCESSED UNTIL ITS TOO lATE*/
+	}
+	else if (fileLocation.find("skeleGuy") != fileLocation.npos) {
+		printf("found skeleGuy \n");
+		boneCount = 79;
+	}
+	else if (fileLocation.find("BaseHuman") != fileLocation.npos) {
+		printf("found basehuman \n");
+		boneCount = 62;
+	}
+	else if (fileLocation.find("ellMesh") != fileLocation.npos) {
+		printf("found ellMesh \n");
+		boneCount = 101;
+	}
+	else if (fileLocation.find("ellBASE") != fileLocation.npos) {
+		printf("found ellBASE \n");
+		boneCount = 101;
+	}
+	else if (fileLocation.find("katana") != fileLocation.npos) {
+		boneCount = 1;
+	}
+	else if (fileLocation.find("spear") != fileLocation.npos) {
+		boneCount = 1;
+	}
+	else if (fileLocation.find("spear") != fileLocation.npos) {
+		boneCount = 1;
+	}
+	else if (fileLocation.find("Corruption") != fileLocation.npos) {
+		printf("found Corrupton : DataManager \n");
+		boneCount = 62;
+	}
+	else if (fileLocation.find("PlayerMan") != fileLocation.npos) {
+		printf("found PlayerMan : DataManager \n");
+		boneCount = 62;
+	}
+	else if (fileLocation.find("skeleMon") != fileLocation.npos) {
+		printf("found skelemon \n");
+		boneCount = 68;
+	}
+	else if (fileLocation.find("LichKing") != fileLocation.npos) {
+		printf("found lich king \n");
+		boneCount = 11;
+	}
+	else if (fileLocation.find("deerMonster") != fileLocation.npos) {
+		printf("found deerman \n");
+		boneCount = 21;
+	}
+	else if (fileLocation.find("DevilMan") != fileLocation.npos) {
+		printf("found devilman \n");
+		boneCount = 52;
+	}
+	else if (fileLocation.find("charmer") != fileLocation.npos) {
+		printf("found charmer \n");
+		boneCount = 35;
+	}
+	else if (fileLocation.find("carrot") != fileLocation.npos) {
+		boneCount = 33;
+	}
+	else {
+		boneCount = 66;
+		printf("DataManager :: COULD NOT IDENTIFY SOURCE FILE, NO USEFUL BONES SET : %s \n", fileLocation.c_str());
+	}
+
+	filePath = exportLocation;
+	skeleton = std::make_unique<SkeletonHandler>(fileLocation);
+	printf("after construction of skeleton \n");
+	//exportData.meshNames = skeleton->meshNames;
+
+	exportData.nameExport.meshNames = skeleton->meshNames;
+	exportData.nameExport.meshNTNames = skeleton->meshNTNames;
+	exportData.nameExport.meshSimpleNames = skeleton->meshSimpleNames;
+	exportData.nameExport.meshNTSimpleNames = skeleton->meshNTSimpleNames;
+	//exportData.meshNTNames = skeleton->meshNTNames;
+
+	exportData.meshExport.meshes = skeleton->meshes;
+	exportData.meshNTExport.meshes = skeleton->meshesNT;
+
+	exportData.meshSimpleExport.meshes = skeleton->meshesSimple;
+	exportData.meshNTSimpleExport.meshes = skeleton->meshesNTSimple;
+	/*
+	for (int i = 0; i < skeleton->meshesNT.size(); i++) {
+		exportData.meshNTExport.meshesNT.emplace_back(skeleton->meshesNT[i].first, skeleton->meshesNT[i].second);
+	}
+	*/
+	if (exportData.nameExport.meshNames.size() != exportData.meshExport.meshes.size()) {
+		printf("size mismatch between names of meshes \n");
+	}
+	if (exportData.nameExport.meshNTNames.size() != exportData.meshNTExport.meshes.size()) {
+		printf("size mistmatch between meshesNT \n");
+	}
+
+#if ANIM_TYPE == 0
+	exportData.animExport.animations.resize(skeleton->animationNames.size(), {});
+	printf("skeleton animation name size : %d \n", skeleton->animationNames.size());
+#else
+	exportData.fullAnim.animations.resize(skeleton->animationNames.size(), {});
+#endif
+
+	auto boneMap = skeleton->GetBoneInfoMap();
+	boneVectorForPrinting.resize(boneMap.size());
+	for (auto iter = boneMap.begin(); iter != boneMap.end(); iter++) {
+		boneVectorForPrinting[iter->second.id] = iter->first;
+		//printf("bone id : name ~ %d : %s \n", iter->second.id, iter->first.c_str());
+	}
+	/*
+	for (int i = 0; i < boneVectorForPrinting.size(); i++) {
+		printf("bone id : name ~ %d :% s \n", i, boneVectorForPrinting[i].c_str());
+	}
+	*/
+	//usefulBones.resize(skeleton->GetBoneCount(), false);
+}
+
 void DataManager::initializeTheData() {
 	std::vector<int32_t> weightlessBones;
 	weightlessBones = cleanWeightlessBones();
@@ -44,7 +161,7 @@ void DataManager::initializeTheData() {
 #if ANIM_TYPE == 0
 	std::vector<std::vector<std::vector<ExportData::boneEData>>>& animRef = exportData.animExport.animations;
 #else
-	std::vector<std::vector<std::vector<ExportData::bobmat4>>>& animRef = exportData.fullAnim.animations;
+	std::vector<std::vector<std::vector<glm::mat4>>>& animRef = exportData.fullAnim.animations;
 #endif
 
 	for (int i = 0; i < skeleton->animationNames.size(); i++) { //per animation loop
@@ -122,18 +239,19 @@ void DataManager::initializeTheData() {
 
 void DataManager::checkBoneSequence() {
 	//this just checks if the bones are in order
-	std::vector<int> foundBoneIDs;
-	for (int j = 0; j < exportData.meshExport.meshes.size(); j++) {
-		for (int k = 0; k < exportData.meshExport.meshes[j].first.size(); k++) {
-			for (int x = 0; x < MAX_BONE_INFLUENCE; x++) {
+	std::vector<int> foundBoneIDs{};
+	for (auto& mesh : exportData.meshExport.meshes) {
+		for (auto& vertex : mesh.vertices) {
+			for (int bone = 0; bone < MAX_BONE_INFLUENCE; bone++) {
 				bool found = false;
-				for (int i = 0; i < foundBoneIDs.size(); i++) {
-					if (exportData.meshExport.meshes[j].first[k].m_BoneIDs[x] == foundBoneIDs[i]) {
+				for( auto& foundBone : foundBoneIDs ){
+					if(vertex.m_BoneIDs[bone] == foundBone ){
 						found = true;
+						break;
 					}
 				}
 				if (!found) {
-					foundBoneIDs.push_back(exportData.meshExport.meshes[j].first[k].m_BoneIDs[x]);
+					foundBoneIDs.push_back(vertex.m_BoneIDs[bone]);
 				}
 			}
 		}
@@ -155,22 +273,24 @@ void DataManager::checkBoneSequence() {
 			printf("didnt find bone id : %d \n", k);
 		}
 	}
-	std::vector<int> foundBoneIDsNT;
-	for (int j = 0; j < exportData.meshNTExport.meshesNT.size(); j++) {
-		for (int k = 0; k < exportData.meshNTExport.meshesNT[j].first.size(); k++) {
-			for (int x = 0; x < MAX_BONE_INFLUENCE; x++) {
+	std::vector<int> foundBoneIDsNT{};
+	for (auto& mesh : exportData.meshNTExport.meshes) {
+		for (auto& vertex : mesh.vertices) {
+			for (int bone = 0; bone < MAX_BONE_INFLUENCE; bone++) {
 				bool found = false;
-				for (int i = 0; i < foundBoneIDsNT.size(); i++) {
-					if (exportData.meshNTExport.meshesNT[j].first[k].m_BoneIDs[x] == foundBoneIDsNT[i]) {
+				for (auto& foundBone : foundBoneIDs) {
+					if (vertex.m_BoneIDs[bone] == foundBone) {
 						found = true;
+						break;
 					}
 				}
 				if (!found) {
-					foundBoneIDsNT.push_back(exportData.meshNTExport.meshesNT[j].first[k].m_BoneIDs[x]);
+					foundBoneIDsNT.push_back(vertex.m_BoneIDs[bone]);
 				}
 			}
 		}
 	}
+
 	for (int k = 0; k < boneCount; k++) {
 		bool found = false;
 		for (int i = 0; i < foundBoneIDsNT.size();) {
@@ -192,12 +312,12 @@ void DataManager::checkBoneSequence() {
 
 void DataManager::checkWonkyBones() {
 	for (int j = 0; j < exportData.meshExport.meshes.size(); j++) {
-		for (int k = 0; k < exportData.meshExport.meshes[j].first.size(); k++) {
+		for (int k = 0; k < exportData.meshExport.meshes[j].vertices.size(); k++) {
 			bool hasAPositive = false;
 			for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
-				hasAPositive |= exportData.meshExport.meshes[j].first[k].m_BoneIDs[i] >= 0;
-				if (exportData.meshExport.meshes[j].first[k].m_BoneIDs[i] < -1) {
-					printf("MESH[%d] AT VERTEX[%d] AT BONE[%d] HAS A WONKY NUMBER : %d \n", j, k, i, exportData.meshExport.meshes[j].first[k].m_BoneIDs[i]);
+				hasAPositive |= exportData.meshExport.meshes[j].vertices[k].m_BoneIDs[i] >= 0;
+				if (exportData.meshExport.meshes[j].vertices[k].m_BoneIDs[i] < -1) {
+					printf("MESH[%d] AT VERTEX[%d] AT BONE[%d] HAS A WONKY NUMBER : %d \n", j, k, i, exportData.meshExport.meshes[j].vertices[k].m_BoneIDs[i]);
 				}
 			}
 			/*
@@ -226,12 +346,24 @@ void DataManager::checkWonkyBones() {
 			if (!hasAPositive) {
 				printf("MESH[%d] AT VERTEX[%d] HAS NO POSITIVE BONE VALUE, WEIGHTLESS VERTEX \n", j, k);
 				for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
-					printf("%d  ", exportData.meshExport.meshes[j].first[k].m_BoneIDs[i]);
+					printf("%d  ", exportData.meshExport.meshes[j].vertices[k].m_BoneIDs[i]);
 				}
 				printf("\n");
 			}
 		}
 	}
+
+	/* this function, checkWonkyBones, is for debugging. 
+	// this commented is faster, but the iterators are relevant here
+	for (auto& mesh : exportData.meshExport.meshes) {
+		for (auto& vertex : mesh.vertices) {
+			bool hasAPositive = false;
+			for (int bone = 0; bone < MAX_BONE_INFLUENCE; bone++) {
+				hasAPositive |= vertex.m_BoneIDs[bone] >= 0;
+			}
+		}
+	}
+	*/
 }
 
 std::vector<int32_t> DataManager::cleanWeightlessBones() {
@@ -256,33 +388,24 @@ std::vector<int32_t> DataManager::cleanWeightlessBones() {
 	printf("checking bone values before cleaning \n");
 	checkWonkyBones();
 	
-
-
-	//shift boneVertex boneIDs forward from here
-	for (int j = 0; j < exportData.meshExport.meshes.size(); j++) {
-		for (int k = 0; k < exportData.meshExport.meshes[j].first.size(); k++) {
-			for (int x = 0; x < MAX_BONE_INFLUENCE; x++) { //i kinda wanna change MAX_BONE_INFLUENCE to 2 or 3 but ill worry about that later
-				//std::vector<unsigned int> cleanBonesCopy = cleanTheseBones;
-				//uint32_t cleanedCount = 0;
-				for (int i = 0; i < cleanTheseBones.size(); i++) { //im not sure if the ordering of these for loops matters or not
-					if (exportData.meshExport.meshes[j].first[k].m_BoneIDs[x] > (cleanTheseBones[i] - i)) { //i need to do this to animation bone ids too
-						//printf("bone id, cleanBoneValue - %d:%d \n", exportData.meshExport.meshes[j].vertices[k].m_BoneIDs[x], cleanTheseBones[i]);
-						exportData.meshExport.meshes[j].first[k].m_BoneIDs[x]--;
-						//cleanedCount++;
+	for (auto& mesh : exportData.meshExport.meshes) {
+		for (auto vertex : mesh.vertices) {
+			for (int bone = 0; bone < MAX_BONE_INFLUENCE; bone++) {
+				for (int i = 0; i < cleanTheseBones.size(); i++) {
+					if (vertex.m_BoneIDs[bone] > (cleanTheseBones[i] - i)) {
+						vertex.m_BoneIDs[bone]--;
 					}
 				}
 			}
 		}
 	}
-	for (int j = 0; j < exportData.meshNTExport.meshesNT.size(); j++) {
-		for (int k = 0; k < exportData.meshNTExport.meshesNT[j].first.size(); k++) {
-			for (int x = 0; x < MAX_BONE_INFLUENCE; x++) { //i kinda wanna change MAX_BONE_INFLUENCE to 2 or 3 but ill worry about that later
-				//std::vector<unsigned int> cleanBonesCopy = cleanTheseBones;
-				//uint32_t cleanedCount = 0;
-				for (int i = 0; i < cleanTheseBones.size(); i++) { //im not sure if the ordering of these for loops matters or not
-					if (exportData.meshNTExport.meshesNT[j].first[k].m_BoneIDs[x] > (cleanTheseBones[i] - i)) { //i need to do this to animation bone ids too
-						//printf("bone id, cleanBoneValue - %d:%d \n", exportData.meshExport.meshes[j].vertices[k].m_BoneIDs[x], cleanTheseBones[i]);
-						exportData.meshNTExport.meshesNT[j].first[k].m_BoneIDs[x]--;
+
+	for (auto& mesh : exportData.meshNTExport.meshes) {
+		for (auto vertex : mesh.vertices) {
+			for (int bone = 0; bone < MAX_BONE_INFLUENCE; bone++) {
+				for (int i = 0; i < cleanTheseBones.size(); i++) {
+					if (vertex.m_BoneIDs[bone] > (cleanTheseBones[i] - i)) {
+						vertex.m_BoneIDs[bone]--;
 					}
 				}
 			}
@@ -413,7 +536,7 @@ void DataManager::cleanAnimations() {
 
 void DataManager::adjustBones() {
 	for (int i = 0; i < exportData.meshExport.meshes.size(); i++) {
-		for (int j = 0; j < exportData.meshExport.meshes[i].first.size(); j++) {
+		for (int j = 0; j < exportData.meshExport.meshes[i].vertices.size(); j++) {
 #define BONE_WEIGHT_NORMALIZE false
 #if BONE_WEIGHT_NORMALIZE
 			//float boneWeightLength = 0;
@@ -428,8 +551,8 @@ void DataManager::adjustBones() {
 					exportData.meshExport.meshes[i].vertices[j].m_BoneIDs[k] = 0;
 				}
 #else
-				if (exportData.meshExport.meshes[i].first[j].m_BoneIDs[k] < 0) {
-					exportData.meshExport.meshes[i].first[j].m_BoneIDs[k] = 0;
+				if (exportData.meshExport.meshes[i].vertices[j].m_BoneIDs[k] < 0) {
+					exportData.meshExport.meshes[i].vertices[j].m_BoneIDs[k] = 0;
 				}
 #endif
 			}
@@ -447,8 +570,8 @@ void DataManager::adjustBones() {
 		}
 	}
 
-	for (int i = 0; i < exportData.meshNTExport.meshesNT.size(); i++) {
-		for (int j = 0; j < exportData.meshNTExport.meshesNT[i].first.size(); j++) {
+	for (int i = 0; i < exportData.meshNTExport.meshes.size(); i++) {
+		for (int j = 0; j < exportData.meshNTExport.meshes[i].vertices.size(); j++) {
 #define BONE_WEIGHT_NORMALIZE false
 #if BONE_WEIGHT_NORMALIZE
 			//float boneWeightLength = 0;
@@ -463,8 +586,8 @@ void DataManager::adjustBones() {
 					exportData.meshNTExport.meshesNT[i].vertices[j].m_BoneIDs[k] = 0;
 				}
 #else
-				if (exportData.meshNTExport.meshesNT[i].first[j].m_BoneIDs[k] < 0) {
-					exportData.meshNTExport.meshesNT[i].first[j].m_BoneIDs[k] = 0;
+				if (exportData.meshNTExport.meshes[i].vertices[j].m_BoneIDs[k] < 0) {
+					exportData.meshNTExport.meshes[i].vertices[j].m_BoneIDs[k] = 0;
 				}
 #endif
 			}
@@ -564,13 +687,14 @@ void DataManager::fileWrite() {
 
 	exportData.setVersionTracker("2.0.0");
 
-	
+	exportData.writeToFile(filePath);
+
+	/*
 	if (exportData.meshExport.meshes.size() > 0) {
 		printf("writing mesh count : %d \n", exportData.meshExport.meshes.size());
 		std::ofstream outFile(filePath + "_mesh.ewe", std::ofstream::binary);
 		if (outFile.is_open()) {
-			boost::archive::binary_oarchive binary_output_archive(outFile, boost::archive::no_header);
-			binary_output_archive& exportData.meshExport;
+			exportData.meshExport.writeToFile(outFile);
 			printf("archived mesh file to : %s%s \n", filePath.c_str(), "_mesh.ewe");
 
 			outFile.close();
@@ -587,8 +711,7 @@ void DataManager::fileWrite() {
 		std::ofstream outFile(filePath + "_meshNT.ewe", std::ofstream::binary);
 		outFile.open(filePath + "_meshNT.ewe", std::ofstream::binary);
 		if (outFile.is_open()) {
-			boost::archive::binary_oarchive boaNT(outFile, boost::archive::no_header);
-			boaNT& exportData.meshNTExport;
+			exportData.meshNTExport.writeToFile(outFile);
 			printf("archived mesh NT to file : %s%s \n", filePath.c_str(), "_meshNT.ewe");
 
 			outFile.close();
@@ -607,8 +730,7 @@ void DataManager::fileWrite() {
 		printf("writing partial anim \n");
 		std::ofstream outFile(filePath + "_anim.ewe", std::ofstream::binary);
 		if (outFile.is_open()) {
-			boost::archive::binary_oarchive boaAnim(outFile, boost::archive::no_header);
-			boaAnim& exportData.animExport;
+			exportData.animExport.writeToFile(outFile);
 			printf("archived anim file to : %s%s \n", filePath.c_str(), "_anim.ewe");
 			outFile.close();
 		}
@@ -624,8 +746,7 @@ void DataManager::fileWrite() {
 		printf("writing full anim \n");
 		std::ofstream outFile(filePath + "_fullAnim.ewe", std::ofstream::binary);
 		if (outFile.is_open()) {
-			boost::archive::binary_oarchive boaFullAnim(outFile, boost::archive::no_header);
-			boaFullAnim& exportData.fullAnim;
+			exportData.fullAnim.writeToFile(outFile);
 			printf("archived anim file to : %s%s \n", filePath.c_str(), "_fullAnim.ewe");
 			outFile.close();
 		}
@@ -683,6 +804,7 @@ void DataManager::fileWrite() {
 			printf("FAILED TO OPEN MESH FILE \n");
 		}
 	}
+	*/
 
 
 
@@ -823,6 +945,182 @@ void DataManager::printAnimationBoneSet(std::vector<ExportData::boneEData>& prin
 		printf("\n");
 	}
 }
+
+void ThreadImportStruct::threadImport(std::string threadPath) {
+	activeThreadCount++;
+	//Assimp::Importer importer;
+	boneCount = 101;
+
+	//std::unique_ptr<SkeletonHandler> skeleton = std::make_unique<SkeletonHandler>(threadPath);
+	SkeletonHandler skeleton{ threadPath };
+	printf("after construction of skeleton \n");
+
+	meshNames = skeleton.meshNames;
+	meshNTNames = skeleton.meshNTNames;
+
+	meshes.reserve(skeleton.meshes.size());
+	for (int i = 0; i < skeleton.meshes.size(); i++) {
+		meshes.emplace_back(skeleton.meshes[i].vertices, skeleton.meshes[i].indices);
+	}
+
+	meshesNT.reserve(skeleton.meshesNT.size());
+	for (int i = 0; i < skeleton.meshesNT.size(); i++) {
+		meshesNT.emplace_back(skeleton.meshesNT[i].vertices, skeleton.meshesNT[i].indices);
+	}
+	if (meshNames.size() != meshes.size()) {
+		printf("size mismatch between names of meshes \n");
+	}
+	if (meshNTNames.size() != meshesNT.size()) {
+		printf("size mistmatch between meshesNT \n");
+	}
+
+
+	auto boneMap = skeleton.GetBoneInfoMap();
+	boneVectorForPrinting.resize(boneMap.size());
+	for (auto iter = boneMap.begin(); iter != boneMap.end(); iter++) {
+		boneVectorForPrinting[iter->second.id] = iter->first;
+		//printf("bone id : name ~ %d : %s \n", iter->second.id, iter->first.c_str());
+	}
+	usefulBones.resize(boneCount, false);
+	for (int i = 0; i < skeleton.usefulBone.size(); i++) {
+		usefulBones[i] = skeleton.usefulBone[i];
+		if (skeleton.usefulBone[i]) {
+			printf("skeleton in threadIMport has a useful bone \n");
+		}
+	}
+	/*
+	for (int i = 0; i < boneVectorForPrinting.size(); i++) {
+		printf("bone id : name ~ %d :% s \n", i, boneVectorForPrinting[i].c_str());
+	}
+	*/
+	//usefulBones.resize(skeleton->GetBoneCount(), false);
+	activeThreadCount--;
+	printf("thread improt finished : %s - threadsRemaining : %d \n", threadPath.c_str(), activeThreadCount);
+	//return; //shitty 
+}
+
+void DataManager::batchImporter() {
+	/*
+	Assimp::LogStream* logStreamPls = Assimp::LogStream::createDefaultStream(aiDefaultLogStream_STDOUT);
+	if (logStreamPls == nullptr) {
+		printf("LOG STREAM FAILED TO CREATE \n");
+	}
+	else {
+		printf("log stream created \n");
+	}
+	if (Assimp::DefaultLogger::get() == nullptr) {
+		printf("default logger is null \n");
+	}
+
+	Assimp::DefaultLogger::create();
+	if (Assimp::DefaultLogger::get()->attachStream(logStreamPls, Assimp::Logger::LogSeverity::VERBOSE) &&
+		Assimp::DefaultLogger::get()->attachStream(logStreamPls, Assimp::Logger::LogSeverity::DEBUGGING &&
+			Assimp::DefaultLogger::get()->attachStream(logStreamPls, Assimp::Logger::LogSeverity::NORMAL)
+		)
+		) {
+		printf("log stream attached to default logger \n");
+	}
+	else {
+		printf("DEFAULT LOG STREAM WAS NOT ATTACHED \n");
+	}
+	*/
+	ThreadImportStruct threadImport;
+	threadImport.threadImport("model\\batch\\__0.fbx");
+	threadImport.print();
+
+	return;
+
+	printf("thread concurrency : %d \n", std::thread::hardware_concurrency());
+	ThreadImportStruct::activeThreadCount = 0;
+	std::vector<ThreadImportStruct> threadImportStructs;
+	uint32_t fileCount = 0;
+	for (const auto& entry : std::filesystem::directory_iterator("model\\batch\\")) {
+		//threadImportStructs.push_back({});
+		//printf("testing individual imports : %d \n", fileCount);
+		//threadImportStructs.back().threadImport(entry.path().generic_string());
+
+		fileCount++;
+	}
+	//return; //temp testing
+	threadImportStructs.resize(fileCount);
+	ThreadPool threadPool(std::max(fileCount, std::thread::hardware_concurrency() - 1));
+
+
+
+	uint32_t fileIterator = 0;
+	std::string animPath = "";
+
+	for (const auto& entry : std::filesystem::directory_iterator("model\\batch\\")) {
+		std::string tempAnimString = entry.path().generic_string();
+		if (tempAnimString.find("anim") != tempAnimString.npos) {
+			if (animPath.length() > 3) { printf("anim path was already initialized? \n"); }
+			animPath = tempAnimString;
+			threadImportStructs.pop_back();
+			continue;
+		}
+		threadPool.enqueueVoid(&ThreadImportStruct::threadImport, &threadImportStructs[fileIterator], entry.path().generic_string());
+		fileIterator++;
+	}
+
+
+	threadPool.waitForCompletion();
+	printf("after finished waiting for thread pool \n");
+
+	DataManager dataManager(animPath, "tester", 1);
+
+
+
+	uint32_t meshCount = 0;
+	uint32_t meshNTCount = 0;
+	uint32_t meshNameCount = 0;
+	uint32_t meshNTNameCount = 0;
+	for (int i = 0; i < threadImportStructs.size(); i++) {
+		meshCount += threadImportStructs[i].meshes.size();
+		meshNTCount += threadImportStructs[i].meshesNT.size();
+		meshNameCount += threadImportStructs[i].meshNames.size();
+		meshNTNameCount += threadImportStructs[i].meshNames.size();
+	}
+	dataManager.exportData.meshExport.meshes.reserve(meshCount);
+	dataManager.exportData.meshNTExport.meshes.reserve(meshNTCount);
+	dataManager.exportData.setVersionTracker("3.0.0");
+	dataManager.exportData.nameExport.meshNames.reserve(meshNameCount);
+	dataManager.exportData.nameExport.meshNTNames.reserve(meshNTNameCount);
+
+	for (int i = 0; i < threadImportStructs.size(); i++) {
+		if (threadImportStructs[i].meshes.size() != threadImportStructs[i].meshNames.size()) {
+			printf("ERROR : mesh to name size mismatch - %d:%d \n", threadImportStructs[i].meshes.size(), threadImportStructs[i].meshNames.size());
+			assert(threadImportStructs[i].meshes.size() == threadImportStructs[i].meshNames.size());
+		}
+		if (threadImportStructs[i].meshesNT.size() != threadImportStructs[i].meshNTNames.size()) {
+			printf("ERROR : meshNT to name size mismatch - %d:%d \n", threadImportStructs[i].meshesNT.size(), threadImportStructs[i].meshNTNames.size());
+			assert(threadImportStructs[i].meshesNT.size() == threadImportStructs[i].meshNTNames.size());
+		}
+		for (int j = 0; j < threadImportStructs[i].meshes.size(); j++) {
+			dataManager.exportData.meshExport.meshes.push_back(threadImportStructs[i].meshes[j]);
+			dataManager.exportData.nameExport.meshNames.push_back(threadImportStructs[i].meshNames[j]);
+		}
+		for (int j = 0; j < threadImportStructs[i].meshesNT.size(); j++) {
+			dataManager.exportData.meshNTExport.meshes.push_back(threadImportStructs[i].meshesNT[j]);
+			dataManager.exportData.nameExport.meshNTNames.push_back(threadImportStructs[i].meshNTNames[j]);
+		}
+		if (dataManager.skeleton->usefulBone.size() != threadImportStructs[i].usefulBones.size()) {
+			printf("useful bone size mismatch - %d:%d \n", dataManager.skeleton->usefulBone.size(), threadImportStructs[i].usefulBones.size());
+		}
+		assert(dataManager.skeleton->usefulBone.size() == threadImportStructs[i].usefulBones.size());
+		for (int j = 0; j < threadImportStructs[i].usefulBones.size(); j++) {
+			if (threadImportStructs[i].usefulBones[j]) {
+				printf("threadIMprotStruct has a useful bone \n");
+			}
+			dataManager.batchUsefulBones[j] = dataManager.batchUsefulBones[j] || threadImportStructs[i].usefulBones[j];
+		}
+	}
+	printf("mesh,name - NT - %d:%d - %d:%d \n", dataManager.exportData.meshExport.meshes.size(), dataManager.exportData.nameExport.meshNames.size(),
+		dataManager.exportData.meshNTExport.meshes.size(), dataManager.exportData.nameExport.meshNTNames.size()
+	);
+	printf("full processing data manager \n");
+	dataManager.fullProcess();
+
+}
 /*
 void DataManager::printBobMat4(std::vector<float> printed, std::string titleOf) {
 	std::string printString = titleOf;
@@ -834,3 +1132,4 @@ void DataManager::printBobMat4(std::vector<float> printed, std::string titleOf) 
 	}
 }
 */
+

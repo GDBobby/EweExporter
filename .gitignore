@@ -27,3 +27,6 @@ AssimpLog.txt
 New Text Document.txt
 *.log
 x64/
+*.fbx
+*.txt
+*.glb

@@ -2,131 +2,62 @@
 #include "SkeletalAnimation.h"
 
 
-#include <glm/gtc/type_ptr.hpp>
-
-
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/utility.hpp>
-
-/*
-//XML
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
-*/
-
-//binary
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-
-
-
-#define bobmat_size 16
+//#include <boost/serialization/string.hpp>
+//#include <boost/serialization/vector.hpp>
+//#include <boost/serialization/utility.hpp>
+//
+//
+////binary
+//#include <boost/archive/binary_oarchive.hpp>
+//#include <boost/archive/binary_iarchive.hpp>
 
 class ExportData {
 public:
-    struct bobmat4 {
-        float bmat4[bobmat_size];
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& bmat4;
-        }
-        void operator=(float* other) {
-            memcpy(bmat4, other, sizeof(bmat4));
-        }
-        void operator=(glm::mat4& other) {
-            memcpy(bmat4, glm::value_ptr(other), sizeof(bmat4));
-        }
-        bool operator==(bobmat4& other) {
-            for (int i = 0; i < bobmat_size; i++) {
-                if ((bmat4[i] - other.bmat4[i]) > .0001f) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        bobmat4(float* other) {
-            memcpy(bmat4, other, sizeof(bmat4));
-        }
-        bobmat4(glm::mat4& other) {
-            memcpy(bmat4, glm::value_ptr(other), sizeof(bmat4));
-        }
-        bobmat4() {
-            for (int i = 0; i < bobmat_size; i++) {
-                bmat4[i] = 1.f;
-            }
-        }
-    };
- 
     struct boneEData {
         uint32_t boneID{69420};
-        bobmat4 boneTransform{};
+        glm::mat4 boneTransform{};
 
         boneEData(uint32_t id, glm::mat4 transform) : boneID{ id }, boneTransform{ transform } {
             //memcpy(boneTransform, glm::value_ptr(transform), sizeof(boneTransform));
         }
         boneEData() {}
 
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& boneID;
-            archive& boneTransform;
+        void writeToFile(std::ofstream& outFile) const {
+            Writing::UIntToFile(outFile, &boneID);
+            Writing::GLMMat4ToFile(outFile, boneTransform);
+        }
+        void writeToFileSwapEndian(std::ofstream& outFile) const {
+            Writing::UIntToFileSwapEndian(outFile, &boneID);
+            Writing::GLMMat4ToFileSwapEndian(outFile, boneTransform);
         }
     };
-    struct meshEData {
+    template<typename V_Type>
+    struct TemplateMeshData {
         std::string versionTracker = "";
-        std::vector<std::pair<std::vector<boneVertex>, std::vector<uint32_t>>> meshes;
+        std::vector<MeshData<V_Type>> meshes;
 
-        meshEData(std::vector<boneVertex>& vertex, std::vector<uint32_t>& index) {
-            meshes.push_back(std::make_pair(vertex, index));
+        TemplateMeshData(std::vector<V_Type>& vertex, std::vector<uint32_t>& index) {
+            meshes.emplace_back(vertex, index);
         }
-        meshEData() {}
+        TemplateMeshData() : meshes{} {}
 
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& versionTracker;
-            archive& meshes;
+        void writeToFile(std::ofstream& outFile, bool endian) const {
+            if (endian) {
+                for (const auto& mesh : meshes) {
+                    mesh.writeToFile(outFile);
+                }
+            }
+            else {
+                for (const auto& mesh : meshes) {
+                    mesh.writeToFileSwapEndian(outFile);
+                }
+            }
         }
     };
-    struct meshNTEData {
-        std::string versionTracker = "";
-        std::vector<std::pair<std::vector<boneVertexNoTangent>, std::vector<uint32_t>>> meshesNT;
-        meshNTEData(std::vector<boneVertexNoTangent>& vertex, std::vector<uint32_t>& index) {
-            meshesNT.push_back(std::make_pair(vertex, index));
-        }
-        meshNTEData() {}
 
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& versionTracker;
-            archive& meshesNT;
-        }
-    };
-    struct meshSimpleData {
-        std::vector<std::pair<std::vector<Vertex>, std::vector<uint32_t>>> meshesSimple;
-        meshSimpleData(std::vector<Vertex>& vertex, std::vector<uint32_t>& index) {
-            meshesSimple.push_back(std::make_pair(vertex, index));
-        }
-        meshSimpleData() {}
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& meshesSimple;
-        }
-    };    
-    struct meshNTSimpleData {
-        std::vector<std::pair<std::vector<VertexNT>, std::vector<uint32_t>>> meshesNTSimple;
-        meshNTSimpleData(std::vector<VertexNT>& vertex, std::vector<uint32_t>& index) {
-            meshesNTSimple.push_back(std::make_pair(vertex, index));
-        }
-        meshNTSimpleData() {}
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& meshesNTSimple;
-        }
-    };
     struct AnimData {
         std::string versionTracker = "";
-        std::vector<bobmat4> defaultBoneValues; //T-POSE or something, for when an animation doesn't cover everything
+        std::vector<glm::mat4> defaultBoneValues; //T-POSE or something, for when an animation doesn't cover everything
 
         int32_t handBone = -1;
 
@@ -139,12 +70,54 @@ public:
             boneEData>>> //{bone id, bone transform}, bone ID will keep track of which bone as i clear useless bones. i could also use a map, might be better
             animations;
 
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& versionTracker;
-            archive& defaultBoneValues;
-            archive& animations;
-            archive& handBone;
+        void writeToFile(std::ofstream& outFile, bool endian) const {
+            uint64_t size = defaultBoneValues.size();
+            if (endian) {
+                Writing::UInt64ToFile(outFile, &size);
+
+                for (auto const& defaultBone : defaultBoneValues) {
+                    Writing::GLMMat4ToFile(outFile, defaultBone);
+                }
+
+                size = animations.size(); //animationCount
+                Writing::UInt64ToFile(outFile, &size);
+
+                for (auto const& animationDuration : animations) {
+                    size = animationDuration.size();
+                    Writing::UInt64ToFile(outFile, &size);
+                    for (auto const& boneCount : animationDuration) {
+                        size = boneCount.size();
+                        Writing::UInt64ToFile(outFile, &size);
+                        for (auto const& boneData : boneCount) {
+                            boneData.writeToFile(outFile);
+                        }
+                    }
+                }
+                Writing::IntToFile(outFile, &handBone);
+            }
+            else {
+                Writing::UInt64ToFileSwapEndian(outFile, &size);
+                for (auto const& defaultBone : defaultBoneValues) {
+                    Writing::GLMMat4ToFileSwapEndian(outFile, defaultBone);
+                }
+                size = animations.size(); //animationCount
+                Writing::UInt64ToFileSwapEndian(outFile, &size);
+
+                for (auto const& animationDuration : animations) {
+                    size = animationDuration.size();
+                    Writing::UInt64ToFileSwapEndian(outFile, &size);
+                    for (auto const& boneCount : animationDuration) {
+                        size = boneCount.size();
+                        Writing::UInt64ToFileSwapEndian(outFile, &size);
+                        for (auto const& boneData : boneCount) {
+                            boneData.writeToFileSwapEndian(outFile);
+                        }
+                    }
+                }
+                Writing::IntToFileSwapEndian(outFile, &handBone);
+            }
+
+
         }
     };
     struct FullAnimData {
@@ -154,13 +127,42 @@ public:
         std::vector< //each animation
             std::vector< //animation frame duration
             std::vector< //boneCount
-            bobmat4>>> animations;
+            glm::mat4>>> animations;
 
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& versionTracker;
-            archive& animations;
-            archive& handBone;
+        void writeToFile(std::ofstream& outFile, bool endian) const {
+            if (endian) {
+                uint64_t size = animations.size(); //animationCount
+                Writing::UInt64ToFile(outFile, &size);
+                for (auto const& animationDuration : animations) {
+                    size = animationDuration.size();
+                    Writing::UInt64ToFile(outFile, &size);
+                    for (auto const& boneCount : animationDuration) {
+                        size = boneCount.size();
+                        Writing::UInt64ToFile(outFile, &size);
+                        for (auto const& boneData : boneCount) {
+                            Writing::GLMMat4ToFile(outFile, boneData);
+                        }
+                    }
+                }
+                Writing::IntToFile(outFile, &handBone);
+            }
+            else {
+                uint64_t size = animations.size(); //animationCount
+                Writing::UInt64ToFileSwapEndian(outFile, &size);
+                for (auto const& animationDuration : animations) {
+                    size = animationDuration.size();
+                    Writing::UInt64ToFileSwapEndian(outFile, &size);
+                    for (auto const& boneCount : animationDuration) {
+                        size = boneCount.size();
+                        Writing::UInt64ToFileSwapEndian(outFile, &size);
+                        for (auto const& boneData : boneCount) {
+                            Writing::GLMMat4ToFileSwapEndian(outFile, boneData);
+                        }
+                    }
+                }
+                Writing::IntToFileSwapEndian(outFile, &handBone);
+            }
+
         }
     };
     struct NameExportData {
@@ -170,20 +172,27 @@ public:
         std::vector<std::string> meshSimpleNames;
         std::vector<std::string> meshNTSimpleNames;
 
-        template<class Archive>
-        void serialize(Archive& archive, const unsigned int version) {
-            archive& versionTracker;
-            archive& meshNTNames;
-            archive& meshNames;
-            archive& meshSimpleNames;
-            archive& meshNTSimpleNames;
+        void writeToFile(std::ofstream& outFile) {
+            for (auto const& meshName : meshNames) {
+                outFile.write(meshName.c_str(), meshName.length());
+            }
+            for (auto const& meshName : meshNTNames) {
+                outFile.write(meshName.c_str(), meshName.length());
+            }
+            for (auto const& meshName : meshSimpleNames) {
+                outFile.write(meshName.c_str(), meshName.length());
+            }
+            for (auto const& meshName : meshNTSimpleNames) {
+                outFile.write(meshName.c_str(), meshName.length());
+            }
         }
     };
 
-    meshEData meshExport;
-    meshNTEData meshNTExport;    
-    meshSimpleData meshSimpleExport;
-    meshNTSimpleData meshNTSimpleExport;
+    TemplateMeshData<boneVertex> meshExport{};
+    TemplateMeshData<boneVertexNoTangent> meshNTExport{};
+    TemplateMeshData<Vertex> meshSimpleExport{};
+    TemplateMeshData<VertexNT> meshNTSimpleExport{};
+
     AnimData animExport;
     FullAnimData fullAnim;
     NameExportData nameExport;
@@ -194,6 +203,90 @@ public:
         animExport.versionTracker = version;
         nameExport.versionTracker = version;
         fullAnim.versionTracker = version;
+    }
+
+    void writeToFile(std::string fileName) {
+        uint32_t testValue = 1;
+        bool endian = *reinterpret_cast<uint8_t*>(&testValue) == 1;
+        endian = false;
+        printf("endianness : %d \n", endian);
+
+        if(meshExport.meshes.size() > 0) {
+            std::ofstream outFile{ fileName + "_mesh.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_mesh.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+            meshExport.writeToFile(outFile, endian);
+        }
+        if (meshNTExport.meshes.size() > 0) {
+            std::ofstream outFile{ fileName + "_meshNT.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_meshNT.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+            meshNTExport.writeToFile(outFile, endian);
+        }
+        if (meshSimpleExport.meshes.size() > 0) {
+            std::ofstream outFile{ fileName + "_meshSimple.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_meshSimple.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+
+            meshSimpleExport.writeToFile(outFile, endian);
+        }
+        if (meshSimpleExport.meshes.size() > 0) {
+            std::ofstream outFile{ fileName + "_meshNTSimple.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_meshNTSimple.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+
+            meshNTSimpleExport.writeToFile(outFile, endian);
+        }
+        if (animExport.animations.size() > 0) {
+            std::ofstream outFile{ fileName + "_anim.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_anim.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+
+            animExport.writeToFile(outFile, endian);
+        }
+
+        if (fullAnim.animations.size() > 0) {
+            std::ofstream outFile{ fileName + "_fullAnim.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_fullAnim.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+
+            fullAnim.writeToFile(outFile, endian);
+        }
+
+        {
+            std::ofstream outFile{ fileName + "_names.ewe" };
+            if (!outFile.is_open()) {
+                outFile.open(fileName + "_names.ewe");
+                if (!outFile.is_open()) {
+                    throw std::runtime_error("failed to open mesh file \n");
+                }
+            }
+            nameExport.writeToFile(outFile);
+        }
     }
 
 };
