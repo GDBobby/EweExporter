@@ -26,10 +26,11 @@ struct BoneInfo {
 	int id;
 	/*offset matrix transforms vertex from model space to bone space*/
 	glm::mat4 offset;
+	BoneInfo() {}
+	BoneInfo(int id) : id{ id } {}
 
 };
-struct AssimpNodeData
-{
+struct AssimpNodeData {
 	glm::mat4 transformation;
 	std::string name;
 	int childrenCount;
@@ -41,7 +42,7 @@ class SkeletalAnimation
 public:
 	SkeletalAnimation() = default;
 
-	SkeletalAnimation(const aiScene* scene, int animationIter, std::map<std::string, BoneInfo>& boneInfoMap, int& boneCount);
+	SkeletalAnimation(const aiScene* scene, int animationIter, std::unordered_map<std::string, BoneInfo>& boneInfoMap, int& boneCount);
 
 	~SkeletalAnimation() {}
 
@@ -50,15 +51,14 @@ public:
 	inline float GetTicksPerSecond() { return m_TicksPerSecond; }
 	inline float GetDuration() { return m_Duration; }
 	inline const AssimpNodeData& GetRootNode() { return m_RootNode; }
-	inline const std::map<std::string, BoneInfo>& GetBoneIDMap() { 
-		return m_BoneInfoMap; }
+	inline const std::unordered_map<std::string, BoneInfo>& GetBoneIDMap() { return m_BoneInfoMap; }
 	inline uint32_t getBoneIDMapSize() { return m_BoneInfoMap.size(); }
 	inline const int& getBoneSize() { return m_Bones.size(); }
 
 
 
 private:
-	void ReadMissingBones(const aiAnimation* animation, std::map<std::string, BoneInfo>& boneInfoMap, int& boneCount);
+	void ReadMissingBones(const aiAnimation* animation, std::unordered_map<std::string, BoneInfo>& boneInfoMap, int& boneCount);
 
 	void ReadHeirarchyData(AssimpNodeData& dest, const aiNode* src);
 
@@ -66,7 +66,7 @@ private:
 	int m_TicksPerSecond;
 	std::vector<Bone> m_Bones;
 	AssimpNodeData m_RootNode;
-	std::map<std::string, BoneInfo> m_BoneInfoMap;
+	std::unordered_map<std::string, BoneInfo> m_BoneInfoMap;
 };
 
 class Animator {
@@ -87,7 +87,7 @@ public:
 
 	bool SetAnimation(int animStep);
 	void init(SkeletalAnimation* idleAnimation);
-	void CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 parentTransform = glm::mat4(1.0f));
+	void CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 const& parentTransform);
 
 	std::vector<glm::mat4>& GetFinalBoneMatrices() { return m_FinalBoneMatrices; }
 	int32_t getHandBone() { return handBone; }
@@ -155,7 +155,7 @@ private:
 	Animator animator;
 	
 
-	std::map<std::string, BoneInfo> m_BoneInfoMap; //
+	std::unordered_map<std::string, BoneInfo> m_BoneInfoMap; //
 	int m_BoneCounter = 0;
 
 	void processNode(aiNode* node, const aiScene* scene);
@@ -163,15 +163,16 @@ private:
 
 	void collectTangent(boneVertex& vertex, aiMesh* mesh, uint32_t index) {
 		if (mesh->HasTangentsAndBitangents()) {
-			//memcpy(vertex.tangent, &mesh->mTangents[i], SIZEOF3);
+			memcpy(&vertex.tangent, &mesh->mTangents[index], sizeof(float) * 3);
 			//vertex.tangent = mesh->mTangents[index];
-			vertex.tangent.x = mesh->mTangents[index].x;
-			vertex.tangent.y = mesh->mTangents[index].y;
-			vertex.tangent.z = mesh->mTangents[index].z;
+			//vertex.tangent.x = mesh->mTangents[index].x;
+			//vertex.tangent.y = mesh->mTangents[index].y;
+			//vertex.tangent.z = mesh->mTangents[index].z;
 		}
 	}
 	void collectTangent(Vertex& vertex, aiMesh* mesh, uint32_t index) {
 		if (mesh->HasTangentsAndBitangents()) {
+			memcpy(&vertex.tangent, &mesh->mTangents[index], sizeof(float) * 3);
 			vertex.tangent.x = mesh->mTangents[index].x;
 			vertex.tangent.y = mesh->mTangents[index].y;
 			vertex.tangent.z = mesh->mTangents[index].z;

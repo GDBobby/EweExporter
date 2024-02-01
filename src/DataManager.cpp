@@ -19,72 +19,6 @@ for (int i = 0; i < 5; i++) {
 */
 
 DataManager::DataManager(std::string fileLocation, std::string exportLocation) :importPath{ fileLocation } {
-	//Assimp::Importer importer;
-	if (fileLocation.find("ellen") != fileLocation.npos) {
-		printf("found ellen \n");
-		printf("yo wtf \n");
-		boneCount = 101; /* THIS HAS TO BE SET MANUALLY BECAUSE BONE COUNT ISN'T PROCESSED UNTIL ITS TOO lATE*/
-	}
-	else if (fileLocation.find("skeleGuy") != fileLocation.npos) {
-		printf("found skeleGuy \n");
-		boneCount = 79;
-	}
-	else if (fileLocation.find("BaseHuman") != fileLocation.npos) {
-		printf("found basehuman \n");
-		boneCount = 62;
-	}
-	else if (fileLocation.find("ellMesh") != fileLocation.npos) {
-		printf("found ellMesh \n");
-		boneCount = 101;
-	}
-	else if (fileLocation.find("ellBASE") != fileLocation.npos) {
-		printf("found ellBASE \n");
-		boneCount = 101;
-	}
-	else if (fileLocation.find("katana") != fileLocation.npos) {
-		boneCount = 1;
-	}
-	else if (fileLocation.find("spear") != fileLocation.npos) {
-		boneCount = 1;
-	}
-	else if (fileLocation.find("spear") != fileLocation.npos) {
-		boneCount = 1;
-	}
-	else if (fileLocation.find("Corruption") != fileLocation.npos) {
-		printf("found Corrupton : DataManager \n");
-		boneCount = 62;
-	}
-	else if (fileLocation.find("PlayerMan") != fileLocation.npos) {
-		printf("found PlayerMan : DataManager \n");
-		boneCount = 62;
-	}
-	else if (fileLocation.find("skeleMon") != fileLocation.npos) {
-		printf("found skelemon \n");
-		boneCount = 68;
-	}
-	else if (fileLocation.find("LichKing") != fileLocation.npos) {
-		printf("found lich king \n");
-		boneCount = 11;
-	}
-	else if (fileLocation.find("deerMonster") != fileLocation.npos) {
-		printf("found deerman \n");
-		boneCount = 21;
-	}
-	else if (fileLocation.find("DevilMan") != fileLocation.npos) {
-		printf("found devilman \n");
-		boneCount = 52;
-	}
-	else if (fileLocation.find("charmer") != fileLocation.npos) {
-		printf("found charmer \n");
-		boneCount = 35;
-	}
-	else if (fileLocation.find("carrot") != fileLocation.npos) {
-		boneCount = 33;
-	}
-	else {
-		boneCount = 66;
-		printf("DataManager :: COULD NOT IDENTIFY SOURCE FILE, NO USEFUL BONES SET : %s \n", fileLocation.c_str());
-	}
 
 	filePath = exportLocation;
 	skeleton = std::make_unique<SkeletonHandler>(fileLocation);
@@ -685,8 +619,7 @@ void DataManager::fileWrite() {
         } // end of lambda expressio
 	*/
 
-	exportData.setVersionTracker("2.0.0");
-
+	exportData.setVersionTracker("2.1.0");
 	exportData.writeToFile(filePath);
 
 	/*
@@ -902,11 +835,7 @@ void DataManager::setDefaultBones() {
 */
 void DataManager::setDefaultBones(std::vector<glm::mat4>& defaultFinal) {
 	//printf("setting default bones?????? \n");
-	exportData.animExport.defaultBoneValues.resize(defaultFinal.size());
-	for (int i = 0; i < defaultFinal.size(); i++) {
-		exportData.animExport.defaultBoneValues[i] = defaultFinal[i];
-		//memcpy(&exportData.defaultBoneValues[i], glm::value_ptr(defaultFinal[i]), sizeof(float) * 16);
-	}
+	exportData.animExport.defaultBoneValues = defaultFinal;
 }
 
 void DataManager::printGLM4(std::vector<glm::mat4>& printed, std::string titleOf) {
@@ -980,13 +909,6 @@ void ThreadImportStruct::threadImport(std::string threadPath) {
 	for (auto iter = boneMap.begin(); iter != boneMap.end(); iter++) {
 		boneVectorForPrinting[iter->second.id] = iter->first;
 		//printf("bone id : name ~ %d : %s \n", iter->second.id, iter->first.c_str());
-	}
-	usefulBones.resize(boneCount, false);
-	for (int i = 0; i < skeleton.usefulBone.size(); i++) {
-		usefulBones[i] = skeleton.usefulBone[i];
-		if (skeleton.usefulBone[i]) {
-			printf("skeleton in threadIMport has a useful bone \n");
-		}
 	}
 	/*
 	for (int i = 0; i < boneVectorForPrinting.size(); i++) {

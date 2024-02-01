@@ -13,65 +13,53 @@
 struct KeyPosition {
 	glm::vec3 position;
 	float timeStamp;
+	KeyPosition() {}
+	KeyPosition(aiVectorKey* key) : timeStamp{ static_cast<float>(key->mTime)} {
+		memcpy(&position, &key->mValue, sizeof(float) * 3);
+
+	}
 };
 
 struct KeyRotation {
 	glm::quat orientation;
 	float timeStamp;
+	KeyRotation() {}
+	KeyRotation(aiQuatKey* key) : orientation{ key->mValue.w, key->mValue.x, key->mValue.y, key->mValue.z }, timeStamp { static_cast<float>(key->mTime) } {
+	}
 };
 
 struct KeyScale {
 	glm::vec3 scale;
 	float timeStamp;
+	KeyScale(aiVectorKey* key) : timeStamp{ static_cast<float>(key->mTime) } {
+		memcpy(&scale, &key->mValue, sizeof(float) * 3);
+	}
 };
 
 class Bone {
 public:
-	Bone(const std::string& name, int ID, const aiNodeAnim* channel)
+	Bone(aiString const& name, int ID, const aiNodeAnim* channel)
 		:
-		m_Name(name),
-		m_ID(ID),
-		m_LocalTransform(1.0f)
+		m_Name{ name.data },
+		m_ID{ ID },
+		m_LocalTransform{ 1.0f },
+		m_NumPositions{channel->mNumPositionKeys},
+		m_NumRotations{channel->mNumRotationKeys},
+		m_NumScalings{channel->mNumScalingKeys}
 	{
-		m_NumPositions = channel->mNumPositionKeys;
 
 		for (int positionIndex = 0; positionIndex < m_NumPositions; ++positionIndex) {
 			//aiVector3D aiPosition = channel->mPositionKeys[positionIndex].mValue;
 			float timeStamp = channel->mPositionKeys[positionIndex].mTime;
-			KeyPosition data;
-			//data.position = AssimpGLMHelpers::GetGLMVec(aiPosition);
-			data.position.x = channel->mPositionKeys[positionIndex].mValue.x;// / 10.f;
-			data.position.y = channel->mPositionKeys[positionIndex].mValue.y;// / 10.f;
-			data.position.z = channel->mPositionKeys[positionIndex].mValue.z;// / 10.f;
-
-			//std::cout << "bone data.position ~ " << data.position.x << " : " << data.position.y << " : " << data.position.z << std::endl;
-
-			data.timeStamp = timeStamp;
-			m_Positions.push_back(data);
+			m_Positions.emplace_back(channel->mPositionKeys + positionIndex);
 		}
 
-		m_NumRotations = channel->mNumRotationKeys;
 		for (int rotationIndex = 0; rotationIndex < m_NumRotations; ++rotationIndex) {
-			aiQuaternion aiOrientation = channel->mRotationKeys[rotationIndex].mValue;
-			float timeStamp = channel->mRotationKeys[rotationIndex].mTime;
-			KeyRotation data;
-			//data.orientation = AssimpGLMHelpers::GetGLMQuat(aiOrientation);
-			data.orientation = glm::quat(aiOrientation.w, aiOrientation.x, aiOrientation.y, aiOrientation.z);
-			data.timeStamp = timeStamp;
-			m_Rotations.push_back(data);
+			m_Rotations.emplace_back(channel->mRotationKeys + rotationIndex);
 		}
 
-		m_NumScalings = channel->mNumScalingKeys;
 		for (int keyIndex = 0; keyIndex < m_NumScalings; ++keyIndex) {
-			//aiVector3D scale = channel->mScalingKeys[keyIndex].mValue;
-			float timeStamp = channel->mScalingKeys[keyIndex].mTime;
-			KeyScale data;
-			//data.scale = AssimpGLMHelpers::GetGLMVec(scale);
-			data.scale.x = channel->mScalingKeys[keyIndex].mValue.x;
-			data.scale.y = channel->mScalingKeys[keyIndex].mValue.y;
-			data.scale.z = channel->mScalingKeys[keyIndex].mValue.z;
-			data.timeStamp = timeStamp;
-			m_Scales.push_back(data);
+			m_Positions.emplace_back(channel->mScalingKeys + keyIndex);
 		}
 	}
 
@@ -82,31 +70,34 @@ public:
 		m_LocalTransform = translation * rotation * scale;
 	}
 	glm::mat4 GetLocalTransform() { return m_LocalTransform; }
-	std::string GetBoneName() const { return m_Name; }
+	std::string const& GetBoneName() const { return m_Name; }
 	int GetBoneID() { return m_ID; }
 
 
 
 	int GetPositionIndex(float animationTime) {
 		for (int index = 0; index < m_NumPositions - 1; ++index) {
-			if (animationTime < m_Positions[index + 1].timeStamp)
+			if (animationTime < m_Positions[index + 1].timeStamp) {
 				return index;
+			}
 		}
 		assert(0);
 	}
 
 	int GetRotationIndex(float animationTime) {
 		for (int index = 0; index < m_NumRotations - 1; ++index) {
-			if (animationTime < m_Rotations[index + 1].timeStamp)
+			if (animationTime < m_Rotations[index + 1].timeStamp) {
 				return index;
+			}
 		}
 		assert(0);
 	}
 
 	int GetScaleIndex(float animationTime) {
 		for (int index = 0; index < m_NumScalings - 1; ++index) {
-			if (animationTime < m_Scales[index + 1].timeStamp)
+			if (animationTime < m_Scales[index + 1].timeStamp) {
 				return index;
+			}
 		}
 		assert(0);
 	}
@@ -115,10 +106,9 @@ public:
 private:
 
 	float GetScaleFactor(float lastTimeStamp, float nextTimeStamp, float animationTime) {
-		float scaleFactor = 0.0f;
 		float midWayLength = animationTime - lastTimeStamp;
 		float framesDiff = nextTimeStamp - lastTimeStamp;
-		scaleFactor = midWayLength / framesDiff;
+		float scaleFactor = midWayLength / framesDiff;
 		return scaleFactor;
 	}
 
@@ -157,12 +147,12 @@ private:
 		return glm::scale(glm::mat4(1.0f), finalScale);
 	}
 
-	std::vector<KeyPosition> m_Positions;
-	std::vector<KeyRotation> m_Rotations;
-	std::vector<KeyScale> m_Scales;
-	int m_NumPositions;
-	int m_NumRotations;
-	int m_NumScalings;
+	std::vector<KeyPosition> m_Positions{};
+	std::vector<KeyRotation> m_Rotations{};
+	std::vector<KeyScale> m_Scales{};
+	uint32_t m_NumPositions;
+	uint32_t m_NumRotations;
+	uint32_t m_NumScalings;
 
 	glm::mat4 m_LocalTransform;
 	std::string m_Name;

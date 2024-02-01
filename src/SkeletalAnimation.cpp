@@ -82,7 +82,7 @@ struct std::hash<VertexNT> {
 
 #define USING_TANGENT_SPACE true
 
-SkeletalAnimation::SkeletalAnimation(const aiScene* scene, int animationIter, std::map<std::string, BoneInfo>& boneInfoMap, int& boneCount) {
+SkeletalAnimation::SkeletalAnimation(const aiScene* scene, int animationIter, std::unordered_map<std::string, BoneInfo>& boneInfoMap, int& boneCount) {
 	if (animationIter > scene->mNumAnimations) {
 		std::cout << "?? animation iter too high" << std::endl;
 	}
@@ -97,16 +97,15 @@ SkeletalAnimation::SkeletalAnimation(const aiScene* scene, int animationIter, st
 	ReadMissingBones(scene->mAnimations[animationIter], boneInfoMap, boneCount);
 }
 Bone* SkeletalAnimation::FindBone(const std::string& name) {
-	auto iter = std::find_if(m_Bones.begin(), m_Bones.end(),
-		[&](const Bone& Bone) {
-			return Bone.GetBoneName() == name;
+	for (auto& bone : m_Bones) {
+		if (bone.GetBoneName() == name) {
+			return &bone;
 		}
-	);
-	if (iter == m_Bones.end()) return nullptr;
-	else return &(*iter);
+	}
+	return nullptr;
 }
 
-void SkeletalAnimation::ReadMissingBones(const aiAnimation* animation, std::map<std::string, BoneInfo>& boneInfoMap, int& boneCount) {
+void SkeletalAnimation::ReadMissingBones(const aiAnimation* animation, std::unordered_map<std::string, BoneInfo>& boneInfoMap, int& boneCount) {
 	int size = animation->mNumChannels;
 	//std::cout << "mNumChannels : " << animation->mNumChannels << std::endl;
 
@@ -115,16 +114,15 @@ void SkeletalAnimation::ReadMissingBones(const aiAnimation* animation, std::map<
 
 	//reading channels(bones engaged in an animation and their keyframes)
 	for (int i = 0; i < size; i++) {
-		auto channel = animation->mChannels[i];
-		std::string boneName = channel->mNodeName.data;
+		auto& channel = animation->mChannels[i];
+		std::string boneName{ channel->mNodeName.data };
 
-		if (boneInfoMap.find(boneName) == boneInfoMap.end())
-		{
-			boneInfoMap[boneName].id = boneCount;
+		if (!boneInfoMap.contains(boneName)) {
+			//boneInfoMap[boneName].id = boneCount;
+			boneInfoMap.try_emplace(boneName, boneCount);
 			boneCount++;
 		}
-		m_Bones.push_back(Bone(channel->mNodeName.data,
-			boneInfoMap[channel->mNodeName.data].id, channel));
+		m_Bones.emplace_back(channel->mNodeName, boneInfoMap.at(channel->mNodeName.data).id, channel);
 	}
 
 	m_BoneInfoMap = boneInfoMap;
@@ -134,33 +132,45 @@ void SkeletalAnimation::ReadHeirarchyData(AssimpNodeData& dest, const aiNode* sr
 
 	dest.name = src->mName.data;
 	//dest.transformation = AssimpGLMHelpers::ConvertMatrixToGLMFormat(src->mTransformation);
-	dest.transformation[0][0] = src->mTransformation.a1; dest.transformation[1][0] = src->mTransformation.a2; dest.transformation[2][0] = src->mTransformation.a3; dest.transformation[3][0] = src->mTransformation.a4;
-	dest.transformation[0][1] = src->mTransformation.b1; dest.transformation[1][1] = src->mTransformation.b2; dest.transformation[2][1] = src->mTransformation.b3; dest.transformation[3][1] = src->mTransformation.b4;
-	dest.transformation[0][2] = src->mTransformation.c1; dest.transformation[1][2] = src->mTransformation.c2; dest.transformation[2][2] = src->mTransformation.c3; dest.transformation[3][2] = src->mTransformation.c4;
-	dest.transformation[0][3] = src->mTransformation.d1; dest.transformation[1][3] = src->mTransformation.d2; dest.transformation[2][3] = src->mTransformation.d3; dest.transformation[3][3] = src->mTransformation.d4;
+
+
+	dest.transformation[0][0] = src->mTransformation.a1; 
+	dest.transformation[1][0] = src->mTransformation.a2; 
+	dest.transformation[2][0] = src->mTransformation.a3; 
+	dest.transformation[3][0] = src->mTransformation.a4;
+
+	dest.transformation[0][1] = src->mTransformation.b1; 
+	dest.transformation[1][1] = src->mTransformation.b2; 
+	dest.transformation[2][1] = src->mTransformation.b3; 
+	dest.transformation[3][1] = src->mTransformation.b4;
+
+	dest.transformation[0][2] = src->mTransformation.c1; 
+	dest.transformation[1][2] = src->mTransformation.c2; 
+	dest.transformation[2][2] = src->mTransformation.c3; 
+	dest.transformation[3][2] = src->mTransformation.c4;
+
+	dest.transformation[0][3] = src->mTransformation.d1; 
+	dest.transformation[1][3] = src->mTransformation.d2; 
+	dest.transformation[2][3] = src->mTransformation.d3; 
+	dest.transformation[3][3] = src->mTransformation.d4;
 	dest.childrenCount = src->mNumChildren;
 
-	for (int i = 0; i < src->mNumChildren; i++)
-	{
+	for (int i = 0; i < src->mNumChildren; i++) {
 		AssimpNodeData newData;
 		ReadHeirarchyData(newData, src->mChildren[i]);
 		dest.children.push_back(newData);
 	}
 }
 
-#define EXTRA_MATERIALS_PATH "C:\\Projects\\BOUGHTMODELS\\peoplePack\\uploads_files_4410196_Blender_Ellen\\Blender_Ellen\\textures\\mesh\\"
-
-
 /*animator*/
 Animator::Animator(SkeletalAnimation* animation) {
 	m_CurrentTime = 0.0;
 	m_CurrentAnimation = animation;
-	//m_FinalBoneMatrices.resize(100, glm::mat4(1.0f)); ?? why not
-	uint32_t boneSize = animation->getBoneSize();
-	std::cout << "bone id map size : " << boneSize << std::endl;
 
-	m_FinalBoneMatrices.reserve(boneSize);
-	for (int i = 0; i < boneSize; i++) { m_FinalBoneMatrices.push_back(glm::mat4(1.0f)); }
+	//m_FinalBoneMatrices.resize(100, glm::mat4(1.0f)); ?? why not
+
+	std::cout << "bone id map size : " << animation->getBoneSize() << std::endl;
+	m_FinalBoneMatrices.resize(animation->getBoneSize(), glm::mat4(1.0f));
 }
 Animator::Animator() {
 	m_CurrentTime = 0.0;
@@ -170,9 +180,7 @@ void Animator::init(SkeletalAnimation* idleAnimation) {
 	m_CurrentTime = 0.0;
 	m_CurrentAnimation = idleAnimation;
 
-	uint32_t boneSize = idleAnimation->getBoneSize();
-	m_FinalBoneMatrices.reserve(boneSize);
-	for (int i = 0; i < boneSize; i++) { m_FinalBoneMatrices.push_back(glm::mat4(1.0f)); }
+	m_FinalBoneMatrices.resize(idleAnimation->getBoneSize(), glm::mat4(1.0f));
 }
 void Animator::UpdateAnimation(float dt) {
 	m_DeltaTime = dt;
@@ -181,7 +189,8 @@ void Animator::UpdateAnimation(float dt) {
 		m_CurrentTime += m_CurrentAnimation->GetTicksPerSecond() * dt;
 		m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
 		//std::cout << "pre updateanimation calc bone transform" << std::endl;
-		CalculateBoneTransform(&m_CurrentAnimation->GetRootNode());
+		glm::mat4 defaultTransform{ 1.f };
+		CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), defaultTransform);
 		//std::cout << "post updateanimation calc bone transform" << std::endl;
 	}
 }
@@ -191,16 +200,17 @@ bool Animator::SetAnimation(int animStep) {
 	if (m_CurrentTime > m_CurrentAnimation->GetDuration()) {
 		return false;
 	}
-	CalculateBoneTransform(&m_CurrentAnimation->GetRootNode());
+	glm::mat4 defaultTransform{ 1.f };
+	CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), defaultTransform);
 }
 
-void Animator::CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 parentTransform/* = glm::mat4(1.0f)*/) {
+void Animator::CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 const& parentTransform) {
 	//std::cout << "inside calculate bone transform" << std::endl;
 	std::string nodeName = node->name;
 	//printf("calculating bone transform, node name : %s \n", node->name.c_str());
 	glm::mat4 nodeTransform = node->transformation;
 
-	Bone* Bone = m_CurrentAnimation->FindBone(nodeName);
+	Bone* Bone{ m_CurrentAnimation->FindBone(nodeName) };
 
 	if (Bone) {
 		Bone->Update(m_CurrentTime);
@@ -210,94 +220,31 @@ void Animator::CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 pare
 	glm::mat4 globalTransformation = parentTransform * nodeTransform;
 
 	auto boneInfoMap = m_CurrentAnimation->GetBoneIDMap();
-	if (boneInfoMap.find(nodeName) != boneInfoMap.end()) {
-		int index = boneInfoMap[nodeName].id;
-		glm::mat4 offset = boneInfoMap[nodeName].offset;
-		m_FinalBoneMatrices[index] = globalTransformation * offset;
+	if (boneInfoMap.contains(nodeName)) {
+		auto& boneInfo = boneInfoMap.at(nodeName);
+		m_FinalBoneMatrices[boneInfo.id] = globalTransformation * boneInfo.offset;
 	}
 
 	//when doing a different bone structure, need to rename this bone, no current method to support dynamic armature changes
 	if (node->name == "weapon_r") {
-		handBone = boneInfoMap[nodeName].id;
+		handBone = boneInfoMap.at(nodeName).id;
 	}
 	else if (node->name == "hand_R") {
-		handBone = boneInfoMap[nodeName].id;
+		handBone = boneInfoMap.at(nodeName).id;
 	}
 	else if (node->name == "Wrist.R") {
-		handBone = boneInfoMap[nodeName].id;
+		handBone = boneInfoMap.at(nodeName).id;
 		//std::cout << "handbone id : " << handBone << std::endl;
 	}
 
-	for (int i = 0; i < node->childrenCount; i++) { CalculateBoneTransform(&node->children[i], globalTransformation); }
+	for(auto& child : node->children){
+		CalculateBoneTransform(&child, globalTransformation);
+	}
 
 	//std::cout << "end of calculate bone transform" << std::endl;
 }
 
 SkeletonHandler::SkeletonHandler(std::string filePath) {
-	if (filePath.find("ellen") != filePath.npos) {
-		printf("found ellen \n");
-		usefulBone.resize(101, false); /* THIS HAS TO BE SET MANUALLY BECAUSE BONE COUNT ISN'T PROCESSED UNTIL ITS TOO lATE*/
-	}
-
-	if (filePath.find("skeleGuy") != filePath.npos) {
-		printf("found skeleGuy \n");
-		usefulBone.resize(79, false);
-	}
-	else if (filePath.find("BaseHuman") != filePath.npos) {
-		printf("found basehuman \n");
-		usefulBone.resize(62, false);
-	}
-	else if (filePath.find("ellMesh") != filePath.npos) {
-		printf("found ellMesh \n");
-		usefulBone.resize(101, false);
-	}
-	else if (filePath.find("ellBASE") != filePath.npos) {
-		printf("found ellBASE \n");
-		usefulBone.resize(101, false);
-	}
-	else if (filePath.find("katana") != filePath.npos) {
-		usefulBone.resize(1, false);
-	}
-	else if (filePath.find("spear") != filePath.npos) {
-		usefulBone.resize(1, false);
-	}
-	else if (filePath.find("shield") != filePath.npos) {
-		usefulBone.resize(1, false);
-	}
-	else if (filePath.find("Corruption") != filePath.npos) {
-		printf("found Corruption \n");
-		usefulBone.resize(62, false);
-	}
-	else if (filePath.find("PlayerMan") != filePath.npos) {
-		printf("found PlayerMan \n");
-		usefulBone.resize(62, false);
-	}
-	else if (filePath.find("skeleMon") != filePath.npos) {
-		printf("found skelemon \n");
-		usefulBone.resize(68, false);
-	}
-	else if (filePath.find("LichKing") != filePath.npos) {
-		printf("found lich king \n");
-		usefulBone.resize(11, false);
-	}
-	else if (filePath.find("deerMonster") != filePath.npos) {
-		printf("found deerman \n");
-		usefulBone.resize(21, false);
-	}
-	else if (filePath.find("DevilMan") != filePath.npos) {
-		printf("found devilman \n");
-		usefulBone.resize(52, false);
-	}
-	else if (filePath.find("charmer") != filePath.npos) {
-		usefulBone.resize(35, false);
-	}
-	else if (filePath.find("carrot") != filePath.npos) {
-		usefulBone.resize(33, false);
-	}
-	else {
-		usefulBone.resize(66, false);
-		printf("default bone count %d : %s \n", usefulBone.size(), filePath.c_str());
-	}
 	skelePath = filePath;
 	//aiScene* scene; need const to improt readfile
 	printf("reading file in skele handler : %s \n", filePath.c_str());
@@ -367,10 +314,7 @@ SkeletonHandler::SkeletonHandler(std::string filePath) {
 	
 	if (animationCount == 0) {
 		printf("returning on 0 animations in skeletonHandler constructor \n");
-		if (!(meshes.size() == meshNames.size()) && (meshesNT.size() == meshNTNames.size())) {
-			printf("size mismatch! assert error \n");
-		}
-		assert((meshes.size() == meshNames.size()) && (meshesNT.size() == meshNTNames.size()));
+		assert((meshes.size() == meshNames.size()) && (meshesNT.size() == meshNTNames.size()) && "SIZE MISMATCH - this is most likely a program bug, not a format bug");
 		return;
 	}
 	printf("init animationCount = %d \n", animationCount);
@@ -675,20 +619,13 @@ std::pair<std::vector<T>, std::vector<uint32_t>> SkeletonHandler::processMesh(ai
 			vertex.uv.x = mesh->mTextureCoords[0][i].x;
 			vertex.uv.y =  1.f - mesh->mTextureCoords[0][i].y;
 		}
-		else {
-			vertex.uv.x = 0.f;
-			vertex.uv.y = 0.f;
-		}
 		collectTangent(vertex, mesh, i);
 		vertices.push_back(vertex);
 	}
 	// now wak through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
-	if ((skelePath.find("katana") != skelePath.npos) || (skelePath.find("spear") != skelePath.npos) || (skelePath.find("shield") != skelePath.npos)) {
-		ExtractBoneWeightForVertices(vertices, mesh, scene);
-	}
-	else {
-		ExtractBoneWeightForVertices(vertices, mesh, scene);
-	}
+
+	ExtractBoneWeightForVertices(vertices, mesh, scene);
+	
 
 #if CUSTOM_ROLL_INDICES
 	printf("mesh doesn't have indices? \n");
@@ -750,21 +687,41 @@ void SkeletonHandler::ExtractBoneWeightForVertices(std::vector<T>& vertices, aiM
 	for (int boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
 		int boneID = -1;
 		std::string boneName = mesh->mBones[boneIndex]->mName.C_Str();
-		if (m_BoneInfoMap.find(boneName) == m_BoneInfoMap.end()) {
+		if (!m_BoneInfoMap.contains(boneName)) {
 			BoneInfo newBoneInfo;
 			newBoneInfo.id = m_BoneCounter;
 			//newBoneInfo.offset = AssimpGLMHelpers::ConvertMatrixToGLMFormat(mesh->mBones[boneIndex]->mOffsetMatrix);
-			newBoneInfo.offset[0][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a1; newBoneInfo.offset[1][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a2; newBoneInfo.offset[2][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a3; newBoneInfo.offset[3][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a4;
-			newBoneInfo.offset[0][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b1; newBoneInfo.offset[1][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b2; newBoneInfo.offset[2][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b3; newBoneInfo.offset[3][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b4;
-			newBoneInfo.offset[0][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c1; newBoneInfo.offset[1][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c2; newBoneInfo.offset[2][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c3; newBoneInfo.offset[3][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c4;
-			newBoneInfo.offset[0][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d1; newBoneInfo.offset[1][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d2; newBoneInfo.offset[2][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d3; newBoneInfo.offset[3][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d4;
 
-			m_BoneInfoMap[boneName] = newBoneInfo;
+			//probably better to memcpy but idc to ensure thats bug free. minor performance hit regardless
+
+
+			newBoneInfo.offset[0][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a1; 
+			newBoneInfo.offset[1][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a2; 
+			newBoneInfo.offset[2][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a3; 
+			newBoneInfo.offset[3][0] = mesh->mBones[boneIndex]->mOffsetMatrix.a4;
+
+			newBoneInfo.offset[0][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b1; 
+			newBoneInfo.offset[1][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b2; 
+			newBoneInfo.offset[2][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b3; 
+			newBoneInfo.offset[3][1] = mesh->mBones[boneIndex]->mOffsetMatrix.b4;
+
+			newBoneInfo.offset[0][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c1; 
+			newBoneInfo.offset[1][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c2; 
+			newBoneInfo.offset[2][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c3; 
+			newBoneInfo.offset[3][2] = mesh->mBones[boneIndex]->mOffsetMatrix.c4;
+
+			newBoneInfo.offset[0][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d1; 
+			newBoneInfo.offset[1][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d2; 
+			newBoneInfo.offset[2][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d3; 
+			newBoneInfo.offset[3][3] = mesh->mBones[boneIndex]->mOffsetMatrix.d4;
+
+			//m_BoneInfoMap[boneName] = newBoneInfo;
+			m_BoneInfoMap.try_emplace(boneName, newBoneInfo);
 			boneID = m_BoneCounter;
 			m_BoneCounter++;
 		}
 		else {
-			boneID = m_BoneInfoMap[boneName].id;
+			boneID = m_BoneInfoMap.at(boneName).id;
 		}
 		assert(boneID != -1);
 		auto weights = mesh->mBones[boneIndex]->mWeights;
@@ -790,8 +747,13 @@ void SkeletonHandler::SetVertexBoneData(T& vertex, int boneID, float weight) {
 		if (vertex.m_BoneIDs[i] < 0) {
 			vertex.m_Weights[i] = weight;
 			vertex.m_BoneIDs[i] = boneID;
-			if (boneID > usefulBone.size()) {
+
+
+			if (boneID >= usefulBone.size()) {
 				printf("bone id greater than usefulBone size, values - %d:%d \n", boneID, usefulBone.size());
+				for (int i = usefulBone.size(); i <= boneID; i++) {
+					usefulBone.emplace_back(false);
+				}
 			}
 			usefulBone[boneID] = true;
 			break;

@@ -42,12 +42,18 @@ public:
         TemplateMeshData() : meshes{} {}
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
+            outFile.write(versionTracker.c_str(), versionTracker.size());
+            outFile.put('\n');
+
+            uint64_t size = meshes.size();
             if (endian) {
+                Writing::UInt64ToFile(outFile, &size);
                 for (const auto& mesh : meshes) {
                     mesh.writeToFile(outFile);
                 }
             }
             else {
+                Writing::UInt64ToFileSwapEndian(outFile, &size);
                 for (const auto& mesh : meshes) {
                     mesh.writeToFileSwapEndian(outFile);
                 }
@@ -72,6 +78,9 @@ public:
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
             uint64_t size = defaultBoneValues.size();
+
+            outFile.write(versionTracker.c_str(), versionTracker.size());
+
             if (endian) {
                 Writing::UInt64ToFile(outFile, &size);
 
@@ -130,6 +139,7 @@ public:
             glm::mat4>>> animations;
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
+            outFile.write(versionTracker.c_str(), versionTracker.size());
             if (endian) {
                 uint64_t size = animations.size(); //animationCount
                 Writing::UInt64ToFile(outFile, &size);
@@ -173,17 +183,31 @@ public:
         std::vector<std::string> meshNTSimpleNames;
 
         void writeToFile(std::ofstream& outFile) {
+            outFile.write(versionTracker.c_str(), versionTracker.size());
+            outFile.put('\n');
+            uint64_t size = meshNames.size();
+            outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshNames) {
                 outFile.write(meshName.c_str(), meshName.length());
+                outFile.put('\n');
             }
+            size = meshNTNames.size();
+            outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshNTNames) {
                 outFile.write(meshName.c_str(), meshName.length());
+                outFile.put('\n');
             }
+            size = meshSimpleNames.size();
+            outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshSimpleNames) {
                 outFile.write(meshName.c_str(), meshName.length());
+                outFile.put('\n');
             }
+            size = meshNTSimpleNames.size();
+            outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshNTSimpleNames) {
                 outFile.write(meshName.c_str(), meshName.length());
+                outFile.put('\n');
             }
         }
     };
@@ -208,7 +232,6 @@ public:
     void writeToFile(std::string fileName) {
         uint32_t testValue = 1;
         bool endian = *reinterpret_cast<uint8_t*>(&testValue) == 1;
-        endian = false;
         printf("endianness : %d \n", endian);
 
         if(meshExport.meshes.size() > 0) {

@@ -212,9 +212,9 @@ struct Vertex {
 	}
 };
 struct VertexNT {
-	glm::vec3 position;
-	glm::vec3 normal;
-	glm::vec2 uv;
+	glm::vec3 position{};
+	glm::vec3 normal{};
+	glm::vec2 uv{};
 
 	bool operator==(const VertexNT& other) const {
 		if (!(this->position == other.position)) {
@@ -245,27 +245,35 @@ struct VertexNT {
 
 template <typename V_Type>
 struct MeshData {
-	std::vector<V_Type> vertices;
-	std::vector<uint32_t> indices;
+	std::vector<V_Type> vertices{};
+	std::vector<uint32_t> indices{};
 
 	MeshData() {}
 	MeshData(std::vector<V_Type> const& vertices, std::vector<uint32_t> const& indices) : vertices{ vertices }, indices{ indices } {}
 	MeshData(std::pair<std::vector<V_Type>, std::vector<uint32_t>> const& pairData) : vertices{ pairData.first }, indices{ pairData.second } {}
 
 	void writeToFile(std::ofstream& outFile) const {
+		uint64_t size = vertices.size();
+		Writing::UInt64ToFile(outFile, &size);
 		for (auto& vertex : vertices) {
 			vertex.writeToFile(outFile);
 		}
+		size = indices.size();
+		Writing::UInt64ToFile(outFile, &size);
 		for (auto& index : indices) {
 			Writing::UIntToFile(outFile, &index);
 		}
 	}
 	void writeToFileSwapEndian(std::ofstream& outFile) const {
 
+		uint64_t size = vertices.size();
+		Writing::UInt64ToFileSwapEndian(outFile, &size);
 		for (auto& vertex : vertices) {
 			vertex.writeToFileSwapEndian(outFile);
 		}
 
+		size = indices.size();
+		Writing::UInt64ToFileSwapEndian(outFile, &size);
 		for (auto& index : indices) {
 			Writing::UIntToFileSwapEndian(outFile, &index);
 		}
