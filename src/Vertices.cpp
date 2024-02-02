@@ -42,7 +42,7 @@ namespace Writing {
 		outFile.write((char*)value, sizeof(uint32_t));
 	}
 	void UInt64ToFile(std::ofstream& outFile, uint64_t const* value) {
-		outFile.write((char*)value, sizeof(uint32_t));
+		outFile.write((char*)value, sizeof(uint64_t));
 	}
 	void UInt64ToFileSwapEndian(std::ofstream& outFile, uint64_t const* value) {
 		uint64_t outValue = *value;
@@ -50,7 +50,7 @@ namespace Writing {
 			(((outValue >> 16) & 0xFF) << 40) | (((outValue >> 24) & 0xFF) << 32) |
 			(((outValue >> 32) & 0xFF) << 24) | (((outValue >> 40) & 0xFF) << 16) |
 			(((outValue >> 48) & 0xFF) << 8) | ((outValue >> 56) & 0xFF);
-		outFile.write((char*)&outValue, sizeof(uint32_t));
+		outFile.write((char*)&outValue, sizeof(uint64_t));
 	}
 
 	void UIntToFileSwapEndian(std::ofstream& outFile, uint32_t const* value) {

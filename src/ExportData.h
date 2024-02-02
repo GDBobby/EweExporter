@@ -42,8 +42,9 @@ public:
         TemplateMeshData() : meshes{} {}
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
+
             outFile.write(versionTracker.c_str(), versionTracker.size());
-            outFile.put('\n');
+            printf("version tracker written to file : %s \n", versionTracker.c_str());
 
             uint64_t size = meshes.size();
             if (endian) {
@@ -77,9 +78,10 @@ public:
             animations;
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
-            uint64_t size = defaultBoneValues.size();
 
             outFile.write(versionTracker.c_str(), versionTracker.size());
+            outFile.put('\n');
+            uint64_t size = defaultBoneValues.size();
 
             if (endian) {
                 Writing::UInt64ToFile(outFile, &size);
@@ -224,6 +226,9 @@ public:
     void setVersionTracker(std::string version) {
         meshExport.versionTracker = version;
         meshNTExport.versionTracker = version;
+        meshNTSimpleExport.versionTracker = version;
+        meshSimpleExport.versionTracker = version;
+
         animExport.versionTracker = version;
         nameExport.versionTracker = version;
         fullAnim.versionTracker = version;
@@ -255,9 +260,9 @@ public:
             meshNTExport.writeToFile(outFile, endian);
         }
         if (meshSimpleExport.meshes.size() > 0) {
-            std::ofstream outFile{ fileName + "_meshSimple.ewe" };
+            std::ofstream outFile{ fileName + "_simpleMesh.ewe" };
             if (!outFile.is_open()) {
-                outFile.open(fileName + "_meshSimple.ewe");
+                outFile.open(fileName + "_simpleMesh.ewe");
                 if (!outFile.is_open()) {
                     throw std::runtime_error("failed to open mesh file \n");
                 }
@@ -265,10 +270,10 @@ public:
 
             meshSimpleExport.writeToFile(outFile, endian);
         }
-        if (meshSimpleExport.meshes.size() > 0) {
-            std::ofstream outFile{ fileName + "_meshNTSimple.ewe" };
+        if (meshNTSimpleExport.meshes.size() > 0) {
+            std::ofstream outFile{ fileName + "_simpleNTMesh.ewe" };
             if (!outFile.is_open()) {
-                outFile.open(fileName + "_meshNTSimple.ewe");
+                outFile.open(fileName + "_simpleNTMesh.ewe");
                 if (!outFile.is_open()) {
                     throw std::runtime_error("failed to open mesh file \n");
                 }

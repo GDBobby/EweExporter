@@ -63,8 +63,8 @@ int main() {
 #if ASSIMP_FBX
 	std::string threadString = "init skeleton";
 	auto startTime = std::chrono::high_resolution_clock::now();
-	std::string animationPath = "../inModels/treeThree.fbx";
-	std::string exportLocation = "../output/treeThree";
+	std::string animationPath = "../inModels/leaf.fbx";
+	std::string exportLocation = "../output/leaf";
 	//printf("loading model : %s \n", animationPath.c_str());
 	printf("current path : %s \n", std::filesystem::current_path().string().c_str());
 
@@ -78,6 +78,8 @@ int main() {
 	//DataManager::batchImporter();
 	return 0;
 	*/
+
+
 	DataManager dataManager(animationPath, exportLocation);
 	dataManager.fullProcess();
 	printf("immediately after full process \n");
@@ -93,7 +95,7 @@ int main() {
 		//file << trackingString << '\n';
 		// DO NOT HARD CODE NOTES< JUST ADD THEM TO THE FILE
 
-		std::string outString = "1.0.1.1 \n";
+		std::string outString = "1.1.0.0 \n";
 		outString += "Total run time : ";
 		outString += std::to_string(timeDiff) + '\n';
 		//std::filesystem::path fileSystemPath = exportLocation;

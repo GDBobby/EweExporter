@@ -255,14 +255,11 @@ struct MeshData {
 	void writeToFile(std::ofstream& outFile) const {
 		uint64_t size = vertices.size();
 		Writing::UInt64ToFile(outFile, &size);
-		for (auto& vertex : vertices) {
-			vertex.writeToFile(outFile);
-		}
+		outFile.write((char*)&vertices[0], size * sizeof(V_Type));
+
 		size = indices.size();
 		Writing::UInt64ToFile(outFile, &size);
-		for (auto& index : indices) {
-			Writing::UIntToFile(outFile, &index);
-		}
+		outFile.write((char*)&indices[0], size * sizeof(uint32_t));
 	}
 	void writeToFileSwapEndian(std::ofstream& outFile) const {
 
