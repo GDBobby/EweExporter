@@ -63,8 +63,8 @@ int main() {
 #if ASSIMP_FBX
 	std::string threadString = "init skeleton";
 	auto startTime = std::chrono::high_resolution_clock::now();
-	std::string animationPath = "../inModels/leaf.fbx";
-	std::string exportLocation = "../output/leaf";
+	std::string animationPath = "../inModels/charmer.fbx";
+	std::string exportLocation = "../output/charmer";
 	//printf("loading model : %s \n", animationPath.c_str());
 	printf("current path : %s \n", std::filesystem::current_path().string().c_str());
 

@@ -50,7 +50,7 @@ public:
 
 		for (int positionIndex = 0; positionIndex < m_NumPositions; ++positionIndex) {
 			//aiVector3D aiPosition = channel->mPositionKeys[positionIndex].mValue;
-			float timeStamp = channel->mPositionKeys[positionIndex].mTime;
+			//float timeStamp = channel->mPositionKeys[positionIndex].mTime;
 			m_Positions.emplace_back(channel->mPositionKeys + positionIndex);
 		}
 
@@ -59,7 +59,7 @@ public:
 		}
 
 		for (int keyIndex = 0; keyIndex < m_NumScalings; ++keyIndex) {
-			m_Positions.emplace_back(channel->mScalingKeys + keyIndex);
+			m_Scales.emplace_back(channel->mScalingKeys + keyIndex);
 		}
 	}
 

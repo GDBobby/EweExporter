@@ -219,7 +219,7 @@ void Animator::CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 cons
 
 	glm::mat4 globalTransformation = parentTransform * nodeTransform;
 
-	auto boneInfoMap = m_CurrentAnimation->GetBoneIDMap();
+	auto const& boneInfoMap = m_CurrentAnimation->GetBoneIDMap();
 	if (boneInfoMap.contains(nodeName)) {
 		auto& boneInfo = boneInfoMap.at(nodeName);
 		m_FinalBoneMatrices[boneInfo.id] = globalTransformation * boneInfo.offset;
@@ -245,6 +245,8 @@ void Animator::CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 cons
 }
 
 SkeletonHandler::SkeletonHandler(std::string filePath) {
+
+	usefulBone.resize(101); //maximum bone count
 	skelePath = filePath;
 	//aiScene* scene; need const to improt readfile
 	printf("reading file in skele handler : %s \n", filePath.c_str());
@@ -424,8 +426,10 @@ void SkeletonHandler::processNode(aiNode* node, const aiScene* scene) {
 						//meshNames.push_back(material->GetName().C_Str());
 						meshes.push_back(processMesh<boneVertex>(mesh, scene, meshNames.back()));
 #else
-						meshNTNames.push_back(material->GetName().C_Str());
-						meshesNT.push_back(processMesh<boneVertexNoTangent>(mesh, scene, meshNTNames.back()));
+
+						//
+						meshNTNames.emplace_back(material->GetName().C_Str());
+						meshesNT.emplace_back(processMesh<boneVertexNoTangent>(mesh, scene, meshNTNames.back()));
 #endif
 					}
 				}
@@ -476,8 +480,8 @@ template <typename T>
 std::pair<std::vector<T>, std::vector<uint32_t>> SkeletonHandler::processMesh(aiMesh* mesh, const aiScene* scene, std::string meshName) {
 	// data to fill
 
-	std::vector<T> vertices;
-	std::vector<uint32_t> indices;
+	std::vector<T> vertices{};
+	std::vector<uint32_t> indices{};
 	//std::vector<Texture> textures;
 
 	if (scene->HasMaterials()) {

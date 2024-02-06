@@ -42,19 +42,29 @@ public:
         TemplateMeshData() : meshes{} {}
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
-
-            outFile.write(versionTracker.c_str(), versionTracker.size());
-            printf("version tracker written to file : %s \n", versionTracker.c_str());
+            printf("beginning template mesh data write : %lu \n", static_cast<std::streamoff>(outFile.tellp()));
+            outFile.write(versionTracker.c_str(), versionTracker.size() + 1);
+            //outFile.put('\n');
+            printf("version tracker written to file - %s : %lu \n", versionTracker.c_str(), static_cast<std::streamoff>(outFile.tellp()));
+            printf("version tracker chars as number - \n");
+            for (int i = 0; i <= versionTracker.size(); i++) {
+                printf("\t %d - %d \n", i, *(&versionTracker[0] + i));
+            }
 
             uint64_t size = meshes.size();
+            printf("mesh export size : %ld \n", size);
             if (endian) {
                 Writing::UInt64ToFile(outFile, &size);
+                printf("after writing mesh size file pos : %lu \n", static_cast<std::streamoff>(outFile.tellp()));
+
+
                 for (const auto& mesh : meshes) {
                     mesh.writeToFile(outFile);
                 }
             }
             else {
                 Writing::UInt64ToFileSwapEndian(outFile, &size);
+                printf("after writing mesh size file pos swap endian : %lu \n", static_cast<std::streamoff>(outFile.tellp()));
                 for (const auto& mesh : meshes) {
                     mesh.writeToFileSwapEndian(outFile);
                 }
@@ -79,8 +89,8 @@ public:
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
 
-            outFile.write(versionTracker.c_str(), versionTracker.size());
-            outFile.put('\n');
+            outFile.write(versionTracker.c_str(), versionTracker.size() + 1);
+            //outFile.put('\n');
             uint64_t size = defaultBoneValues.size();
 
             if (endian) {
@@ -141,7 +151,8 @@ public:
             glm::mat4>>> animations;
 
         void writeToFile(std::ofstream& outFile, bool endian) const {
-            outFile.write(versionTracker.c_str(), versionTracker.size());
+            outFile.write(versionTracker.c_str(), versionTracker.size() + 1);
+            //outFile.put('\n');
             if (endian) {
                 uint64_t size = animations.size(); //animationCount
                 Writing::UInt64ToFile(outFile, &size);
@@ -185,31 +196,31 @@ public:
         std::vector<std::string> meshNTSimpleNames;
 
         void writeToFile(std::ofstream& outFile) {
-            outFile.write(versionTracker.c_str(), versionTracker.size());
-            outFile.put('\n');
+            outFile.write(versionTracker.c_str(), versionTracker.size() + 1);
+            //outFile.put('\n');
             uint64_t size = meshNames.size();
             outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshNames) {
                 outFile.write(meshName.c_str(), meshName.length());
-                outFile.put('\n');
+                //outFile.put('\n');
             }
             size = meshNTNames.size();
             outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshNTNames) {
                 outFile.write(meshName.c_str(), meshName.length());
-                outFile.put('\n');
+                //outFile.put('\n');
             }
             size = meshSimpleNames.size();
             outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshSimpleNames) {
                 outFile.write(meshName.c_str(), meshName.length());
-                outFile.put('\n');
+                //outFile.put('\n');
             }
             size = meshNTSimpleNames.size();
             outFile.write((char*)&size, sizeof(uint64_t));
             for (auto const& meshName : meshNTSimpleNames) {
                 outFile.write(meshName.c_str(), meshName.length());
-                outFile.put('\n');
+                //outFile.put('\n');
             }
         }
     };
@@ -240,7 +251,7 @@ public:
         printf("endianness : %d \n", endian);
 
         if(meshExport.meshes.size() > 0) {
-            std::ofstream outFile{ fileName + "_mesh.ewe" };
+            std::ofstream outFile{ fileName + "_mesh.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_mesh.ewe");
                 if (!outFile.is_open()) {
@@ -250,7 +261,7 @@ public:
             meshExport.writeToFile(outFile, endian);
         }
         if (meshNTExport.meshes.size() > 0) {
-            std::ofstream outFile{ fileName + "_meshNT.ewe" };
+            std::ofstream outFile{ fileName + "_meshNT.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_meshNT.ewe");
                 if (!outFile.is_open()) {
@@ -260,7 +271,7 @@ public:
             meshNTExport.writeToFile(outFile, endian);
         }
         if (meshSimpleExport.meshes.size() > 0) {
-            std::ofstream outFile{ fileName + "_simpleMesh.ewe" };
+            std::ofstream outFile{ fileName + "_simpleMesh.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_simpleMesh.ewe");
                 if (!outFile.is_open()) {
@@ -271,7 +282,7 @@ public:
             meshSimpleExport.writeToFile(outFile, endian);
         }
         if (meshNTSimpleExport.meshes.size() > 0) {
-            std::ofstream outFile{ fileName + "_simpleNTMesh.ewe" };
+            std::ofstream outFile{ fileName + "_simpleNTMesh.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_simpleNTMesh.ewe");
                 if (!outFile.is_open()) {
@@ -282,7 +293,7 @@ public:
             meshNTSimpleExport.writeToFile(outFile, endian);
         }
         if (animExport.animations.size() > 0) {
-            std::ofstream outFile{ fileName + "_anim.ewe" };
+            std::ofstream outFile{ fileName + "_anim.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_anim.ewe");
                 if (!outFile.is_open()) {
@@ -294,7 +305,7 @@ public:
         }
 
         if (fullAnim.animations.size() > 0) {
-            std::ofstream outFile{ fileName + "_fullAnim.ewe" };
+            std::ofstream outFile{ fileName + "_fullAnim.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_fullAnim.ewe");
                 if (!outFile.is_open()) {
@@ -306,7 +317,7 @@ public:
         }
 
         {
-            std::ofstream outFile{ fileName + "_names.ewe" };
+            std::ofstream outFile{ fileName + "_names.ewe", std::ios::binary | std::ios::trunc };
             if (!outFile.is_open()) {
                 outFile.open(fileName + "_names.ewe");
                 if (!outFile.is_open()) {

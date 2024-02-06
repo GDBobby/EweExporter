@@ -17,7 +17,7 @@
 #include <typeinfo>
 #include <unordered_map>
 
-#define FORCE_TANGENTS false
+#define FORCE_TANGENTS true
 
 //#include <iomanip>
 

@@ -61,32 +61,9 @@ class DataManager {
 	std::vector<std::string> animationNames;
 	std::vector<bool> batchUsefulBones;
 
-	DataManager(std::string animPath, std::string exportLocation, int creationFlag /*literally could be anything, just using this to signify anim only*/) {
-		printf("BATCH CONSTRUCTOR \n");
-		boneCount = 101;
-		batchUsefulBones.resize(boneCount, false);
-
-		filePath = exportLocation;
-		skeleton = std::make_unique<SkeletonHandler>(animPath);
-		printf("after construction of skeleton \n");
-
-#if ANIM_TYPE == 0
-		exportData.animExport.animations.resize(skeleton->animationNames.size(), {});
-		printf("skeleton animation name size : %d \n", skeleton->animationNames.size());
-#else
-		exportData.fullAnim.animations.resize(skeleton->animationNames.size(), {});
-#endif
-
-
-		auto boneMap = skeleton->GetBoneInfoMap();
-		printf("data manager batch constructor, boneMap size : %d \n", boneMap.size());
-		boneVectorForPrinting.resize(boneMap.size());
-		for (auto iter = boneMap.begin(); iter != boneMap.end(); iter++) {
-			boneVectorForPrinting[iter->second.id] = iter->first;
-		}
-	}
+	DataManager(std::string const& animPath, std::string const& exportLocation, int creationFlag /*literally could be anything, just using this to signify anim only*/);
 	static void batchImporter();
-	DataManager(std::string fileLocation, std::string exportLocation);
+	DataManager(std::string const& fileLocation, std::string const& exportLocation);
 
 	//run these functions in order, or run FullProcess() instead
 	void fullProcess() {

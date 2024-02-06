@@ -17,12 +17,37 @@ for (int i = 0; i < 5; i++) {
 	printf(printLine.c_str(), tempChecker[0][3], tempChecker[1][3], tempChecker[2][3], tempChecker[3][3]);
 }
 */
-
-DataManager::DataManager(std::string fileLocation, std::string exportLocation) :importPath{ fileLocation } {
+DataManager::DataManager(std::string const& animPath, std::string const& exportLocation, int creationFlag /*literally could be anything, just using this to signify anim only*/) {
+	printf("BATCH CONSTRUCTOR \n");
+	boneCount = 101;
+	batchUsefulBones.resize(boneCount, false);
 
 	filePath = exportLocation;
-	skeleton = std::make_unique<SkeletonHandler>(fileLocation);
+	skeleton = std::make_unique<SkeletonHandler>(animPath);
 	printf("after construction of skeleton \n");
+
+#if ANIM_TYPE == 0
+	exportData.animExport.animations.resize(skeleton->animationNames.size(), {});
+	printf("skeleton animation name size : %d \n", skeleton->animationNames.size());
+#else
+	exportData.fullAnim.animations.resize(skeleton->animationNames.size(), {});
+#endif
+
+
+	auto boneMap = skeleton->GetBoneInfoMap();
+	printf("data manager batch constructor, boneMap size : %d \n", boneMap.size());
+	boneVectorForPrinting.resize(boneMap.size());
+	for (auto iter = boneMap.begin(); iter != boneMap.end(); iter++) {
+		boneVectorForPrinting[iter->second.id] = iter->first;
+	}
+}
+
+DataManager::DataManager(std::string const& fileLocation, std::string const& exportLocation) : importPath{ fileLocation } {
+
+ 	filePath = exportLocation;
+	skeleton = std::make_unique<SkeletonHandler>(fileLocation);
+	boneCount = skeleton->GetBoneCount();
+	printf("after construction of skeleton : %d \n", boneCount);
 	//exportData.meshNames = skeleton->meshNames;
 
 	exportData.nameExport.meshNames = skeleton->meshNames;
