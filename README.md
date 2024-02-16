@@ -1,10 +1,11 @@
 # This program converts from the FBX file format to the EWE file format.
 Overall, this program is not very robust. It's been working, and I've been settling while I have bigger fish to fry.
 
+EweExporter does not carry over textures. Textures will need to be extracted from the source file, separately.
+
 ## Dependencies
 https://github.com/assimp/assimp
 
-EweExporter does not carry over textures. Textures will need to be extracted from the source file, separately.
 
 ## Two options exists for moving forward with this functionality
 * writing a blender plugin (python) to replace this functionality. Probably the best option.
