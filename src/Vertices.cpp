@@ -43,10 +43,10 @@ namespace Writing {
 	}
 	void UInt64ToFile(std::ofstream& outFile, uint64_t const* value) {
 		outFile.write(reinterpret_cast<const char*>(value), sizeof(uint64_t));
-		printf("uint64 values as char \n");
-		for (uint8_t i = 0; i < sizeof(uint64_t); i++) {
-			printf("\t %d : %d \n", i, *(((char*)value) + i));
-		}
+		//printf("uint64 values as char \n");
+		//for (uint8_t i = 0; i < sizeof(uint64_t); i++) {
+		//	printf("\t %d : %d \n", i, *(((char*)value) + i));
+		//}
 
 	}
 	void UInt64ToFileSwapEndian(std::ofstream& outFile, uint64_t const* value) {

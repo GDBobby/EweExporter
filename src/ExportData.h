@@ -199,27 +199,27 @@ public:
             outFile.write(versionTracker.c_str(), versionTracker.size() + 1);
             //outFile.put('\n');
             uint64_t size = meshNames.size();
-            outFile.write((char*)&size, sizeof(uint64_t));
+            Writing::UInt64ToFile(outFile, &size);
             for (auto const& meshName : meshNames) {
-                outFile.write(meshName.c_str(), meshName.length());
+                outFile.write(meshName.c_str(), meshName.length() + 1);
                 //outFile.put('\n');
             }
             size = meshNTNames.size();
-            outFile.write((char*)&size, sizeof(uint64_t));
+            Writing::UInt64ToFile(outFile, &size);
             for (auto const& meshName : meshNTNames) {
-                outFile.write(meshName.c_str(), meshName.length());
+                outFile.write(meshName.c_str(), meshName.length() + 1);
                 //outFile.put('\n');
             }
             size = meshSimpleNames.size();
-            outFile.write((char*)&size, sizeof(uint64_t));
+            Writing::UInt64ToFile(outFile, &size);
             for (auto const& meshName : meshSimpleNames) {
-                outFile.write(meshName.c_str(), meshName.length());
+                outFile.write(meshName.c_str(), meshName.length() + 1);
                 //outFile.put('\n');
             }
             size = meshNTSimpleNames.size();
-            outFile.write((char*)&size, sizeof(uint64_t));
+            Writing::UInt64ToFile(outFile, &size);
             for (auto const& meshName : meshNTSimpleNames) {
-                outFile.write(meshName.c_str(), meshName.length());
+                outFile.write(meshName.c_str(), meshName.length() + 1);
                 //outFile.put('\n');
             }
         }
