@@ -3,9 +3,8 @@ Overall, this program is not very robust. It's been working, and I've been settl
 
 ## Dependencies
 https://github.com/assimp/assimp
-https://www.boost.org/ (specifically, serialization)
 
-It does not carry over textures, textures will need to be extracted from the source file, separately.
+EweExporter does not carry over textures. Textures will need to be extracted from the source file, separately.
 
 ## Two options exists for moving forward with this functionality
 * writing a blender plugin (python) to replace this functionality. Probably the best option.
@@ -25,7 +24,6 @@ It does not carry over textures, textures will need to be extracted from the sou
 
 ## Downsides of the File Format -
 * Model Data is not very space efficient. I believe on average, the file size is 2x the FBX format.
-* Reliant on boost serialization. Maybe not a downside, take it as you will.
 * Baked Animation. (situationally good or bad). GENERALLY speaking, this is going to be bad for any game that isn't a fighting game. If you don't require PREDICTABLE and REACTABLE animation states, baked animations are probably bad.
 
 ## Import example
@@ -34,4 +32,4 @@ https://github.com/GDBobby/Eight-Winds-Engine/blob/main/src/SkeletonHandlerBase.
 
 
 ## Attributions
-https://learnopengl.com/Guest-Articles/2020/Skeletal-Animation - the reading code is largely based off this
+https://learnopengl.com/Guest-Articles/2020/Skeletal-Animation - the FBX import code is largely based on this
